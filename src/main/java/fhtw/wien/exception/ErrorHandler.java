@@ -1,7 +1,6 @@
 package fhtw.wien.exception;
 
-
-import com.paperless.service.NotFoundException;
+import fhtw.wien.exception.NotFoundException;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
