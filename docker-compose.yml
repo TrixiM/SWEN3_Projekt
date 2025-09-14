@@ -1,6 +1,23 @@
 version: "3.9"
 
 services:
+  rest:
+    build:
+      context: .
+      dockerfile: DOCKERFILE.REST
+    container_name: rest-server
+    restart: always
+#    environment:
+ #     DATABASE_HOST: postgres
+  #    DATABASE_PORT: 5432
+   #   DATABASE_NAME: documentdb
+    #  DATABASE_USER: myuser
+     # DATABASE_PASSWORD: mypassword
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+
   postgres:
     image: postgres:16
     container_name: postgres
