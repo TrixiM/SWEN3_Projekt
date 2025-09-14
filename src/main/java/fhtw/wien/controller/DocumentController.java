@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -39,6 +40,13 @@ public class DocumentController {
         var saved = service.create(doc);
         var body = toResponse(saved);
         return ResponseEntity.created(URI.create("/v1/documents/" + saved.getId())).body(body);
+    }
+
+    @GetMapping
+    public List<DocumentResponse> getAll() {
+        return service.getAll().stream()
+                .map(DocumentController::toResponse)
+                .toList();
     }
 
     @GetMapping("{id}")

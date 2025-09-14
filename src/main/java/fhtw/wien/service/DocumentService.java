@@ -6,6 +6,7 @@ import fhtw.wien.repo.DocumentRepo;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -26,6 +27,11 @@ public class DocumentService {
     public Document get(UUID id) {
         return repository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Document not found: " + id));
+    }
+
+    @Transactional(readOnly = true)
+    public List<Document> getAll() {
+        return repository.findAll();
     }
 
     @Transactional
