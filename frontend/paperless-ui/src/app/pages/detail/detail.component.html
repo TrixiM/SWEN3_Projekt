@@ -1,0 +1,18 @@
+<a routerLink="/">← Back</a>
+
+<div *ngIf="loading">Loading…</div>
+<div *ngIf="error">{{ error }}</div>
+
+<div *ngIf="document">
+  <h2>{{ document.title || document.originalFilename }}</h2>
+  <p><strong>Original Filename:</strong> {{ document.originalFilename }}</p>
+  <p><strong>Content Type:</strong> {{ document.contentType }}</p>
+  <p><strong>Size:</strong> {{ document.sizeBytes }} bytes</p>
+  <p><strong>Bucket:</strong> {{ document.bucket }}</p>
+  <p><strong>Object Key:</strong> {{ document.objectKey }}</p>
+  <p><strong>Storage URI:</strong> {{ document.storageUri }}</p>
+  <p><strong>Status:</strong> {{ document.status }}</p>
+  <p><strong>Version:</strong> {{ document.version }}</p>
+  <p><strong>Created At:</strong> {{ document.createdAt }}</p>
+  <p><strong>Updated At:</strong> {{ document.updatedAt }}</p>
+</div>

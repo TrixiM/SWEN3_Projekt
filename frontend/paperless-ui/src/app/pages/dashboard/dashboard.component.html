@@ -1,0 +1,11 @@
+<h2>Documents</h2>
+
+<div *ngIf="loading">Loading…</div>
+<div *ngIf="error">{{ error }}</div>
+
+<ul *ngIf="!loading && !error">
+  <li *ngFor="let doc of documents">
+    <a [routerLink]="['/document', doc.id]">{{ doc.title || doc.originalFilename }}</a>
+    <span class="tags">{{ doc.status }}</span>
+  </li>
+</ul>

@@ -1,0 +1,37 @@
+# Default ignored files
+/shelf/
+/workspace.xml
+# Editor-based HTTP Client requests
+/httpRequests/
+# Environment-dependent path to Maven home directory
+/mavenHomeManager.xml
+# Datasource local storage ignored files
+/dataSources/
+/dataSources.local.xml
+# Node modules
+/node_modules/
+
+# Build output
+/dist/
+/out-tsc/
+/coverage/
+
+# Angular specific
+/.angular/
+
+# IDE/editor settings
+.vscode/
+.idea/
+
+# Environment files (if they contain secrets)
+src/environments/*.local.ts
+src/environments/*.secret.ts
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS generated files
+.DS_Store
+Thumbs.db
