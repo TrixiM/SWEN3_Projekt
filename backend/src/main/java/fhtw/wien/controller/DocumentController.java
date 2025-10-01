@@ -16,6 +16,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/v1/documents")
+@CrossOrigin(origins = "*")
 public class DocumentController {
 
     private final DocumentService service;
