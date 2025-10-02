@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>DMS - Document Details</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#1173d4",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                    },
+                    fontFamily: {
+                        display: ["Inter"],
+                    },
+                    borderRadius: { DEFAULT: "0.25rem", lg: "0.5rem", xl: "0.75rem", full: "9999px" },
+                },
+            },
+        };
+    </script>
+    <style>
+        .form-input, .form-textarea {
+            border-color: #e2e8f0;color: #1e293b;background-color: #ffffff;}
+        .dark .form-input, .dark .form-textarea {
+            border-color: #334155;color: #e2e8f0;background-color: #1e293b;}
+        .form-input::placeholder, .form-textarea::placeholder {
+            color: #94a3b8;
+        }
+        .dark .form-input::placeholder, .dark .form-textarea::placeholder {
+            color: #64748b;
+        }
+    </style>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-200">
+<div class="flex flex-col min-h-screen">
+    <header class="sticky top-0 z-10 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-8">
+                    <a class="flex items-center space-x-2" href="#">
+                        <span class="material-symbols-outlined text-primary text-3xl"> description </span>
+                        <span class="text-xl font-bold">Paperless</span>
+                    </a>
+                    <nav class="hidden md:flex space-x-6">
+                        <a class="text-sm font-medium hover:text-primary transition-colors" href="#">Dashboard</a>
+                        <a aria-current="page" class="text-sm font-medium text-primary" href="#">Documents</a>
+                        <a class="text-sm font-medium hover:text-primary transition-colors" href="#">Tags</a>
+                        <a class="text-sm font-medium hover:text-primary transition-colors" href="#">Correspondents</a>
+                        <a class="text-sm font-medium hover:text-primary transition-colors" href="#">Document Types</a>
+                    </nav>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="relative hidden sm:block">
+                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"> search </span>
+                        <input class="form-input w-full pl-10 pr-4 py-2 rounded-full bg-slate-100 dark:bg-slate-800 border-transparent focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Search" type="text"/>
+                    </div>
+                    <button class="md:hidden p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
+                        <span class="material-symbols-outlined"> menu </span>
+                    </button>
+                    <div class="relative">
+                        <button class="w-10 h-10 rounded-full bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBgbCbbPLi_CtYuzWpckT6imvD_Ij0Ht2cMWPF1J6aQ6qr0BjICNcW981-mYDk0Bv9mF1HeJ8DB04Zs1zlU4F3skZ5p42DetgxYnDVZzkU_r7cRpBtL-tIzwtuKDnGUBr1GGTfkoAN96dfpq-_0BsCbquwdAeduXG8r8gLc5cBb2k-dXo6hWc4GkXDQdQy0WWw0cIr0B4oBAPswb1eoc3y3jmRCXK4MjYbQHBFwnxqAZmXjPX9AhsxQ9llP9yRIquF6veauOUzPF8m_')"></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+    <main class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="max-w-4xl mx-auto">
+            <div class="mb-8">
+                <a class="inline-flex items-center text-sm font-medium hover:text-primary transition-colors mb-4" href="#">
+                    <span class="material-symbols-outlined mr-1"> arrow_back </span>
+                    Back to dashboard
+                </a>
+                <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Document Details</h1>
+                <p class="mt-1 text-slate-500 dark:text-slate-400">View and manage the metadata for this document.</p>
+            </div>
+            <div class="bg-white dark:bg-slate-900/50 rounded-lg shadow-sm p-6 md:p-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300" for="title">Title</label>
+                        <div class="mt-1">
+                            <p class="form-input w-full p-3 bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded" id="title">Project Proposal Q3</p>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300" for="filename">Filename</label>
+                        <div class="mt-1">
+                            <p class="form-input w-full p-3 bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded" id="filename">project_proposal_q3_final.pdf</p>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300" for="content-type">Content Type</label>
+                        <div class="mt-1">
+                            <p class="form-input w-full p-3 bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded" id="content-type">application/pdf</p>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300" for="size">Size</label>
+                        <div class="mt-1">
+                            <p class="form-input w-full p-3 bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded" id="size">2.3 MB</p>
+                        </div>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300" for="tags">Tags</label>
+                        <div class="mt-1 flex flex-wrap gap-2">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary">Proposal</span>
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary">Q3 2024</span>
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary">Urgent</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300" for="checksum">Checksum (MD5)</label>
+                        <div class="mt-1">
+                            <p class="form-input w-full p-3 bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded font-mono text-sm" id="checksum">f4e2...a1c9</p>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300" for="status">Status</label>
+                        <div class="mt-1">
+                            <p class="form-input w-full p-3 bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded" id="status">Archived</p>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300" for="created">Creation Date</label>
+                        <div class="mt-1">
+                            <p class="form-input w-full p-3 bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded" id="created">2024-07-21 10:30 AM</p>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300" for="updated">Last Updated</label>
+                        <div class="mt-1">
+                            <p class="form-input w-full p-3 bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded" id="updated">2024-07-22 02:45 PM</p>
+                        </div>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300" for="summary">Document Summary</label>
+                        <div class="mt-1">
+                            <p class="form-textarea w-full p-3 min-h-[120px] bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded leading-relaxed" id="summary">This document outlines the proposal for the Q3 marketing campaign. It includes budget allocation, target demographics, key performance indicators (KPIs), and a detailed timeline. The primary goal is to increase user engagement by 25% through targeted social media advertising and content marketing initiatives.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-end gap-3">
+                    <button class="w-full sm:w-auto flex items-center justify-center px-4 py-2 border border-slate-300 dark:border-slate-700 text-sm font-medium rounded-lg text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary dark:focus:ring-offset-background-dark transition-colors">
+                        <span class="material-symbols-outlined mr-2 text-base"> edit </span>
+                        Edit Metadata
+                    </button>
+                    <button class="w-full sm:w-auto flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary dark:focus:ring-offset-background-dark transition-colors">
+                        <span class="material-symbols-outlined mr-2 text-base"> delete </span>
+                        Delete Document
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+</body></html>

@@ -1,22 +1,132 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <link
-    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
-    rel="stylesheet"
-  />
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="js/main.js"></script>
-  <title>DMS</title>
+<html lang="en"><head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>DMS - Dashboard</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com" rel="preconnect"/>
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+  <link href="js/main.js">
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#1173d4",
+            "background-light": "#f6f7f8",
+            "background-dark": "#101922",
+            "foreground-light": "#1f2937",
+            "foreground-dark": "#d1d5db",
+            "muted-light": "#6b7280",
+            "muted-dark": "#9ca3af",
+            "border-light": "#e5e7eb",
+            "border-dark": "#374151",
+            "surface-light": "#ffffff",
+            "surface-dark": "#1f2937",
+          },
+          fontFamily: {
+            "display": ["Inter", "sans-serif"]
+          },
+          borderRadius: {
+            "DEFAULT": "0.5rem",
+            "lg": "0.75rem",
+            "xl": "1rem",
+            "full": "9999px"
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings:
+              'FILL' 0,
+              'wght' 400,
+              'GRAD' 0,
+              'opsz' 24
+    }
+  </style>
 </head>
-<body>
-  <div>
-    <h1>Document Management System</h1>
-  </div>
-  <div>
-    <p>Upload document</p>
-    <input type="file">
-  </div>
-</body>
-</html>
+<body class="font-display bg-background-light dark:bg-background-dark text-foreground-light dark:text-foreground-dark">
+<div class="flex flex-col min-h-screen">
+  <header class="bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark sticky top-0 z-10">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center gap-4">
+          <svg class="h-8 w-8 text-primary" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2ZM18 20H6V4H13V9H18V20Z"></path>
+          </svg>
+          <h1 class="text-xl font-bold">Document Management System</h1>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="relative hidden sm:block">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-muted-light dark:text-muted-dark">search</span>
+            <input class="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-full py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary w-48 lg:w-64 transition-all" placeholder="Search" type="text"/>
+          </div>
+          <button class="p-2 rounded-full hover:bg-background-light dark:hover:bg-background-dark transition-colors">
+            <span class="material-symbols-outlined text-muted-light dark:text-muted-dark">notifications</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+  <main class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div class="lg:col-span-2 bg-surface-light dark:bg-surface-dark p-6 rounded-lg shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div class="relative flex-grow">
+            <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-muted-light dark:text-muted-dark">search</span>
+            <input class="w-full bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg py-3 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all" placeholder="Search documents..." type="text"/>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <button class="flex items-center gap-2 px-4 py-2 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors">
+              <span class="text-sm font-medium text-muted-light dark:text-muted-dark">Content Type</span>
+              <span class="material-symbols-outlined text-muted-light dark:text-muted-dark text-lg">expand_more</span>
+            </button>
+            <button class="flex items-center gap-2 px-4 py-2 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors">
+              <span class="text-sm font-medium text-muted-light dark:text-muted-dark">Size</span>
+              <span class="material-symbols-outlined text-muted-light dark:text-muted-dark text-lg">expand_more</span>
+            </button>
+            <button class="flex items-center gap-2 px-4 py-2 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors">
+              <span class="text-sm font-medium text-muted-light dark:text-muted-dark">Status</span>
+              <span class="material-symbols-outlined text-muted-light dark:text-muted-dark text-lg">expand_more</span>
+            </button>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm text-left">
+            <thead class="text-xs text-muted-light dark:text-muted-dark uppercase bg-background-light dark:bg-background-dark">
+
+            </thead>
+            <tbody>
+
+
+            <tr class="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors">
+
+            </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="lg:col-span-1">
+        <div class="bg-surface-light dark:bg-surface-dark p-6 rounded-lg shadow-sm h-full">
+          <label class="cursor-pointer flex flex-col items-center justify-center border-2 border-dashed border-border-light dark:border-border-dark rounded-xl h-full p-8 text-center hover:bg-background-light dark:hover:bg-background-dark transition-colors" for="file-upload">
+            <div class="flex flex-col items-center justify-center pt-5 pb-6">
+<span class="material-symbols-outlined text-5xl text-primary mb-4">
+cloud_upload
+</span>
+              <p class="mb-2 text-lg font-semibold text-foreground-light dark:text-foreground-dark">Drag &amp; Drop files here</p>
+              <p class="text-muted-light dark:text-muted-dark">or click to browse</p>
+            </div>
+            <input class="hidden" id="file-upload" multiple="" name="file-upload" type="file"/>
+          </label>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+</body></html>
