@@ -45,6 +45,10 @@ public class Document {
     @Column(name = "checksum_sha256", length = 64)
     private String checksumSha256;
 
+    @Lob
+    @Column(name = "pdf_data")
+    private byte[] pdfData;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
     private DocumentStatus status = DocumentStatus.NEW;

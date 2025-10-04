@@ -197,26 +197,15 @@ async function handleFileUpload() {
     // Upload each file
     for (const file of files) {
         try {
-            // For now, we'll create a basic document record
-            // In a real implementation, you'd upload the file to S3 first
-            const documentData = {
-                title: file.name,
-                originalFilename: file.name,
-                contentType: file.type || 'application/octet-stream',
-                sizeBytes: file.size,
-                bucket: 'demo-bucket',
-                objectKey: `documents/${Date.now()}-${file.name}`,
-                checksumSha256: 'dummy-checksum' // In reality, you'd calculate this
-            };
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('title', file.name);
 
-            console.log('Uploading document:', documentData);
+            console.log('Uploading document:', file.name);
 
             const response = await fetch(`${API_BASE}/documents`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(documentData)
+                body: formData
             });
 
             if (!response.ok) {

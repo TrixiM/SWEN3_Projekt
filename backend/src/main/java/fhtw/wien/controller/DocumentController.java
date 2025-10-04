@@ -6,10 +6,14 @@ import fhtw.wien.dto.CreateDocumentDTO;
 import fhtw.wien.dto.DocumentResponse;
 import fhtw.wien.service.DocumentService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
@@ -25,19 +29,22 @@ public class DocumentController {
         this.service = service;
     }
 
-    @PostMapping
-    public ResponseEntity<DocumentResponse> create(@Valid @RequestBody CreateDocumentDTO req) {
-        var storageUri = "s3://" + req.bucket() + "/" + req.objectKey(); // derive for now
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<DocumentResponse> create(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("title") String title
+    ) throws IOException {
         var doc = new Document(
-                req.title(),
-                req.originalFilename(),
-                req.contentType(),
-                req.sizeBytes(),
-                req.bucket(),
-                req.objectKey(),
-                storageUri,
-                req.checksumSha256()
+                title,
+                file.getOriginalFilename(),
+                file.getContentType(),
+                file.getSize(),
+                "local-storage",
+                "documents/" + System.currentTimeMillis() + "-" + file.getOriginalFilename(),
+                "file://" + file.getOriginalFilename(),
+                null
         );
+        doc.setPdfData(file.getBytes());
         var saved = service.create(doc);
         var body = toResponse(saved);
         return ResponseEntity.created(URI.create("/v1/documents/" + saved.getId())).body(body);
@@ -53,6 +60,21 @@ public class DocumentController {
     @GetMapping("{id}")
     public DocumentResponse get(@PathVariable UUID id) {
         return toResponse(service.get(id));
+    }
+
+    @GetMapping("{id}/content")
+    public ResponseEntity<byte[]> getContent(@PathVariable UUID id) {
+        var doc = service.get(id);
+        if (doc.getPdfData() == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDispositionFormData("inline", doc.getOriginalFilename());
+        headers.setContentLength(doc.getPdfData().length);
+
+        return new ResponseEntity<>(doc.getPdfData(), headers, HttpStatus.OK);
     }
 
     @DeleteMapping("{id}")
