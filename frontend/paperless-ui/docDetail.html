@@ -85,25 +85,25 @@
                     <div>
                         <label class="block text-sm font-medium text-slate-700 dark:text-slate-300" for="title">Title</label>
                         <div class="mt-1">
-                            <p class="form-input w-full p-3 bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded" id="title"></p>
+                            <input class="form-input w-full p-3 bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded" id="title"></input>
                         </div>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 dark:text-slate-300" for="filename">Filename</label>
                         <div class="mt-1">
-                            <p class="form-input w-full p-3 bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded" id="filename"></p>
+                            <input class="form-input w-full p-3 bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded" id="filename"></input>
                         </div>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 dark:text-slate-300" for="content-type">Content Type</label>
                         <div class="mt-1">
-                            <p class="form-input w-full p-3 bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded" id="content-type"></p>
+                            <input class="form-input w-full p-3 bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded" id="content-type"></p>
                         </div>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 dark:text-slate-300" for="size">Size</label>
                         <div class="mt-1">
-                            <p class="form-input w-full p-3 bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded" id="size"></p>
+                            <input class="form-input w-full p-3 bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded" id="size"></input>
                         </div>
                     </div>
                     <div class="md:col-span-2">
@@ -113,42 +113,51 @@
                     <div>
                         <label class="block text-sm font-medium text-slate-700 dark:text-slate-300" for="checksum">Checksum (MD5)</label>
                         <div class="mt-1">
-                            <p class="form-input w-full p-3 bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded font-mono text-sm" id="checksum"></p>
+                            <input class="form-input w-full p-3 bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded font-mono text-sm" id="checksum"></input>
                         </div>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 dark:text-slate-300" for="status">Status</label>
                         <div class="mt-1">
-                            <p class="form-input w-full p-3 bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded" id="status"></p>
+                            <input class="form-input w-full p-3 bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded" id="status"></input>
                         </div>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 dark:text-slate-300" for="created">Creation Date</label>
                         <div class="mt-1">
-                            <p class="form-input w-full p-3 bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded" id="created"></p>
+                            <input class="form-input w-full p-3 bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded" id="created"></input>
                         </div>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 dark:text-slate-300" for="updated">Last Updated</label>
                         <div class="mt-1">
-                            <p class="form-input w-full p-3 bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded" id="updated"></p>
+                            <input class="form-input w-full p-3 bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded" id="updated"></input>
                         </div>
                     </div>
                     <div class="md:col-span-2">
                         <label class="block text-sm font-medium text-slate-700 dark:text-slate-300" for="summary">Document Summary</label>
                         <div class="mt-1">
-                            <p class="form-textarea w-full p-3 min-h-[120px] bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded leading-relaxed" id="summary"></p>
+                            <input class="form-textarea w-full p-3 min-h-[120px] bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded leading-relaxed" id="summary"></input>
                         </div>
                     </div>
                 </div>
-                <div class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-end gap-3">
-                    <button class="w-full sm:w-auto flex items-center justify-center px-4 py-2 border border-slate-300 dark:border-slate-700 text-sm font-medium rounded-lg text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary dark:focus:ring-offset-background-dark transition-colors">
+
+                <div class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3" >
+                    <button id="editDoc" class="w-full sm:w-auto flex items-center justify-end px-4 py-2 border border-slate-300 dark:border-slate-700 text-sm font-medium rounded-lg text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary dark:focus:ring-offset-background-dark transition-colors">
                         <span class="material-symbols-outlined mr-2 text-base"> edit </span>
                         Edit Metadata
                     </button>
-                    <button class="w-full sm:w-auto flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary dark:focus:ring-offset-background-dark transition-colors">
+                    <button id="deleteDoc" class="w-full sm:w-auto flex items-center justify-end px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary dark:focus:ring-offset-background-dark transition-colors">
                         <span class="material-symbols-outlined mr-2 text-base"> delete </span>
                         Delete Document
+                    </button>
+                    <button id="cancel" class="w-full sm:w-auto flex items-center justify-start px-4 py-2 border border-red-500 dark text-sm font-medium rounded-lg text-red-700 dark:text-red-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-700 dark:focus:ring-offset-background-dark transition-colors">
+                        <span class="material-symbols-outlined mr-2 text-base"> cancel </span>
+                        Cancel
+                    </button>
+                    <button id="save" class="w-full sm:w-auto flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-green-700 hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 dark:focus:ring-offset-background-dark transition-colors">
+                        <span class="material-symbols-outlined mr-2 text-base"> save </span>
+                        Save
                     </button>
                 </div>
             </div>
