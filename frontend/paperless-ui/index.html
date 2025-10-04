@@ -8,7 +8,7 @@
   <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
-  <link href="js/main.js">
+  <script src="js/main.js" defer></script>
   <script>
     tailwind.config = {
       darkMode: "class",
@@ -79,34 +79,50 @@
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div class="relative flex-grow">
             <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-muted-light dark:text-muted-dark">search</span>
-            <input class="w-full bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg py-3 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all" placeholder="Search documents..." type="text"/>
+            <input id="search-input" class="w-full bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg py-3 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all" placeholder="Search documents..." type="text"/>
           </div>
           <div class="flex items-center gap-2 flex-wrap">
-            <button class="flex items-center gap-2 px-4 py-2 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors">
-              <span class="text-sm font-medium text-muted-light dark:text-muted-dark">Content Type</span>
-              <span class="material-symbols-outlined text-muted-light dark:text-muted-dark text-lg">expand_more</span>
-            </button>
-            <button class="flex items-center gap-2 px-4 py-2 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors">
-              <span class="text-sm font-medium text-muted-light dark:text-muted-dark">Size</span>
-              <span class="material-symbols-outlined text-muted-light dark:text-muted-dark text-lg">expand_more</span>
-            </button>
-            <button class="flex items-center gap-2 px-4 py-2 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors">
-              <span class="text-sm font-medium text-muted-light dark:text-muted-dark">Status</span>
-              <span class="material-symbols-outlined text-muted-light dark:text-muted-dark text-lg">expand_more</span>
-            </button>
+            <select id="filter-content-type" class="px-4 py-2 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors text-sm font-medium text-muted-light dark:text-muted-dark focus:outline-none focus:ring-2 focus:ring-primary">
+              <option value="">All Types</option>
+              <option value="application/pdf">PDF</option>
+              <option value="image/">Images</option>
+              <option value="text/">Text</option>
+              <option value="application/msword">Word</option>
+            </select>
+            <select id="filter-size" class="px-4 py-2 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors text-sm font-medium text-muted-light dark:text-muted-dark focus:outline-none focus:ring-2 focus:ring-primary">
+              <option value="">All Sizes</option>
+              <option value="small">Small (&lt; 1MB)</option>
+              <option value="medium">Medium (1-10MB)</option>
+              <option value="large">Large (&gt; 10MB)</option>
+            </select>
+            <select id="filter-status" class="px-4 py-2 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors text-sm font-medium text-muted-light dark:text-muted-dark focus:outline-none focus:ring-2 focus:ring-primary">
+              <option value="">All Statuses</option>
+              <option value="UPLOADED">Uploaded</option>
+              <option value="OCR_PENDING">OCR Pending</option>
+              <option value="OCR_IN_PROGRESS">OCR In Progress</option>
+              <option value="OCR_COMPLETED">OCR Completed</option>
+              <option value="OCR_FAILED">OCR Failed</option>
+            </select>
           </div>
         </div>
         <div class="overflow-x-auto">
           <table class="w-full text-sm text-left">
             <thead class="text-xs text-muted-light dark:text-muted-dark uppercase bg-background-light dark:bg-background-dark">
-
+              <tr>
+                <th scope="col" class="px-6 py-3">Document</th>
+                <th scope="col" class="px-6 py-3">Content Type</th>
+                <th scope="col" class="px-6 py-3">Size</th>
+                <th scope="col" class="px-6 py-3">Status</th>
+                <th scope="col" class="px-6 py-3">Created</th>
+                <th scope="col" class="px-6 py-3">Actions</th>
+              </tr>
             </thead>
-            <tbody>
-
-
-            <tr class="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors">
-
-            </tr>
+            <tbody id="documents-tbody">
+              <tr class="border-b border-border-light dark:border-border-dark">
+                <td colspan="6" class="px-6 py-8 text-center text-muted-light dark:text-muted-dark">
+                  Loading documents...
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>

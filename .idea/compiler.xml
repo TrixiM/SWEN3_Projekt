@@ -8,6 +8,7 @@
         <outputRelativeToContentRoot value="true" />
         <module name="DocumentManagementSystem (2)" />
         <module name="DocumentManagementSystem (1)" />
+        <module name="DocumentManagementSystem" />
       </profile>
     </annotationProcessing>
   </component>
