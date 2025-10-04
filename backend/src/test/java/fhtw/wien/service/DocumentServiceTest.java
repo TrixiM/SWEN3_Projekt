@@ -4,6 +4,7 @@ import fhtw.wien.business.DocumentBusinessLogic;
 import fhtw.wien.business.PdfRenderingBusinessLogic;
 import fhtw.wien.domain.Document;
 import fhtw.wien.exception.NotFoundException;
+import fhtw.wien.messaging.DocumentMessageProducer;
 import fhtw.wien.repo.DocumentRepo;
 import fhtw.wien.service.DocumentService;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,6 +22,7 @@ class DocumentServiceTest {
     private DocumentRepo repo;
     private DocumentBusinessLogic documentBusinessLogic;
     private PdfRenderingBusinessLogic pdfRenderingBusinessLogic;
+    private DocumentMessageProducer messageProducer;
     private DocumentService service;
 
     @BeforeEach
@@ -28,7 +30,8 @@ class DocumentServiceTest {
         repo = mock(DocumentRepo.class);
         documentBusinessLogic = new DocumentBusinessLogic(repo);
         pdfRenderingBusinessLogic = mock(PdfRenderingBusinessLogic.class);
-        service = new DocumentService(documentBusinessLogic, pdfRenderingBusinessLogic);
+        messageProducer = mock(DocumentMessageProducer.class);
+        service = new DocumentService(documentBusinessLogic, pdfRenderingBusinessLogic, messageProducer);
     }
 
 //    @Test
