@@ -14,6 +14,8 @@ public class RabbitMQConfig {
     public static final String DOCUMENT_EXCHANGE = "document.exchange";
     public static final String DOCUMENT_CREATED_QUEUE = "document.created.queue";
     public static final String DOCUMENT_DELETED_QUEUE = "document.deleted.queue";
+    public static final String DOCUMENT_CREATED_ACK_QUEUE = "document.created.ack.queue";
+    public static final String DOCUMENT_DELETED_ACK_QUEUE = "document.deleted.ack.queue";
     public static final String DOCUMENT_CREATED_ROUTING_KEY = "document.created";
     public static final String DOCUMENT_DELETED_ROUTING_KEY = "document.deleted";
 
@@ -33,6 +35,16 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Queue documentCreatedAckQueue() {
+        return new Queue(DOCUMENT_CREATED_ACK_QUEUE, true);
+    }
+
+    @Bean
+    public Queue documentDeletedAckQueue() {
+        return new Queue(DOCUMENT_DELETED_ACK_QUEUE, true);
+    }
+
+    @Bean
     public Binding documentCreatedBinding(Queue documentCreatedQueue, DirectExchange documentExchange) {
         return BindingBuilder.bind(documentCreatedQueue)
                 .to(documentExchange)
@@ -44,6 +56,20 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(documentDeletedQueue)
                 .to(documentExchange)
                 .with(DOCUMENT_DELETED_ROUTING_KEY);
+    }
+
+    @Bean
+    public Binding documentCreatedAckBinding(Queue documentCreatedAckQueue, DirectExchange documentExchange) {
+        return BindingBuilder.bind(documentCreatedAckQueue)
+                .to(documentExchange)
+                .with("document.created.ack");
+    }
+
+    @Bean
+    public Binding documentDeletedAckBinding(Queue documentDeletedAckQueue, DirectExchange documentExchange) {
+        return BindingBuilder.bind(documentDeletedAckQueue)
+                .to(documentExchange)
+                .with("document.deleted.ack");
     }
 
     @Bean
