@@ -89,10 +89,14 @@ function filterDocuments() {
     const statusFilter = filterStatus?.value || '';
 
     const filtered = allDocuments.filter(doc => {
-        // Search filter
+        // Enhanced search filter - search across multiple fields
         const matchesSearch = !searchTerm ||
             doc.title.toLowerCase().includes(searchTerm) ||
-            doc.originalFilename.toLowerCase().includes(searchTerm);
+            doc.originalFilename.toLowerCase().includes(searchTerm) ||
+            doc.contentType.toLowerCase().includes(searchTerm) ||
+            doc.status.toLowerCase().includes(searchTerm) ||
+            formatBytes(doc.sizeBytes).toLowerCase().includes(searchTerm) ||
+            (doc.id && doc.id.toLowerCase().includes(searchTerm));
 
         // Content type filter
         const matchesContentType = !contentTypeFilter ||
@@ -132,10 +136,17 @@ function displayDocuments(documents) {
 
     const rows = documents.map(doc => {
         const statusClass = getStatusClass(doc.status);
+        const isPdf = doc.contentType === 'application/pdf';
+        const rowClass = isPdf ? 'cursor-pointer' : '';
+        const onClickAttr = isPdf ? `onclick="openPdfPreview('${doc.id}', '${escapeHtml(doc.title)}')"` : '';
+
         return `
-            <tr class="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors">
+            <tr class="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors ${rowClass}" ${onClickAttr}>
                 <td class="px-6 py-4">
-                    <div class="font-medium text-foreground-light dark:text-foreground-dark">${escapeHtml(doc.title)}</div>
+                    <div class="font-medium text-foreground-light dark:text-foreground-dark flex items-center gap-2">
+                        ${isPdf ? '<span class="material-symbols-outlined text-red-500 text-sm">picture_as_pdf</span>' : ''}
+                        ${escapeHtml(doc.title)}
+                    </div>
                     <div class="text-xs text-muted-light dark:text-muted-dark">${escapeHtml(doc.originalFilename)}</div>
                 </td>
                 <td class="px-6 py-4 text-muted-light dark:text-muted-dark">${escapeHtml(doc.contentType)}</td>
@@ -145,7 +156,7 @@ function displayDocuments(documents) {
                 </td>
                 <td class="px-6 py-4 text-muted-light dark:text-muted-dark">${formatDate(doc.createdAt)}</td>
                 <td class="px-6 py-4">
-                    <button onclick="deleteDocument('${doc.id}')" class="text-red-500 hover:text-red-700 dark:hover:text-red-400 transition-colors">
+                    <button onclick="event.stopPropagation(); deleteDocument('${doc.id}')" class="text-red-500 hover:text-red-700 dark:hover:text-red-400 transition-colors">
                         <span class="material-symbols-outlined text-xl">delete</span>
                     </button>
                 </td>
@@ -159,6 +170,8 @@ function displayDocuments(documents) {
 // Get status badge class
 function getStatusClass(status) {
     switch (status) {
+        case 'NEW':
+            return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300';
         case 'UPLOADED':
             return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
         case 'OCR_PENDING':
@@ -304,3 +317,135 @@ function showMessage(message, type) {
         }, 300);
     }, 3000);
 }
+
+// PDF Preview functionality
+let currentPdfDoc = null;
+let currentPage = 1;
+let totalPages = 0;
+
+// Configure PDF.js worker
+if (typeof pdfjsLib !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+async function openPdfPreview(documentId, title) {
+    const modal = document.getElementById('pdf-modal');
+    const modalTitle = document.getElementById('pdf-modal-title');
+    const canvas = document.getElementById('pdf-canvas');
+    const loading = document.getElementById('pdf-loading');
+    const error = document.getElementById('pdf-error');
+
+    // Show modal
+    modal.classList.remove('hidden');
+    modalTitle.textContent = title;
+
+    // Hide canvas and error, show loading
+    canvas.style.display = 'none';
+    loading.style.display = 'block';
+    error.classList.add('hidden');
+
+    try {
+        // Fetch the PDF document
+        // Note: You'll need to implement an endpoint to get the PDF content
+        // For now, we'll use a placeholder URL
+        const response = await fetch(`${API_BASE}/documents/${documentId}/content`);
+
+        if (!response.ok) {
+            throw new Error(`Failed to load PDF: ${response.status}`);
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+
+        currentPdfDoc = await loadingTask.promise;
+        totalPages = currentPdfDoc.numPages;
+        currentPage = 1;
+
+        // Update page counter
+        document.getElementById('page-count').textContent = totalPages;
+        document.getElementById('page-num').textContent = currentPage;
+
+        // Render first page
+        await renderPage(currentPage);
+
+        // Hide loading, show canvas
+        loading.style.display = 'none';
+        canvas.style.display = 'block';
+
+    } catch (err) {
+        console.error('Error loading PDF:', err);
+        loading.style.display = 'none';
+        error.classList.remove('hidden');
+        error.textContent = `Error loading PDF: ${err.message}. Make sure the document content endpoint is implemented.`;
+    }
+}
+
+async function renderPage(pageNum) {
+    if (!currentPdfDoc) return;
+
+    try {
+        const page = await currentPdfDoc.getPage(pageNum);
+        const canvas = document.getElementById('pdf-canvas');
+        const context = canvas.getContext('2d');
+
+        // Calculate scale to fit the canvas to the modal
+        const viewport = page.getViewport({ scale: 1.5 });
+
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        const renderContext = {
+            canvasContext: context,
+            viewport: viewport
+        };
+
+        await page.render(renderContext).promise;
+
+        // Update page number display
+        document.getElementById('page-num').textContent = pageNum;
+
+        // Update button states
+        document.getElementById('prev-page').disabled = pageNum === 1;
+        document.getElementById('next-page').disabled = pageNum === totalPages;
+
+    } catch (err) {
+        console.error('Error rendering page:', err);
+    }
+}
+
+function closePdfModal() {
+    const modal = document.getElementById('pdf-modal');
+    modal.classList.add('hidden');
+
+    // Clean up
+    if (currentPdfDoc) {
+        currentPdfDoc.destroy();
+        currentPdfDoc = null;
+    }
+    currentPage = 1;
+    totalPages = 0;
+}
+
+function previousPage() {
+    if (currentPage <= 1) return;
+    currentPage--;
+    renderPage(currentPage);
+}
+
+function nextPage() {
+    if (currentPage >= totalPages) return;
+    currentPage++;
+    renderPage(currentPage);
+}
+
+// Close modal when clicking outside
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('pdf-modal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closePdfModal();
+            }
+        });
+    }
+});
