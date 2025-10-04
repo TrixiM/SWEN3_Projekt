@@ -156,6 +156,10 @@ function displayDocuments(documents) {
                 </td>
                 <td class="px-6 py-4 text-muted-light dark:text-muted-dark">${formatDate(doc.createdAt)}</td>
                 <td class="px-6 py-4">
+                    <button onclick="event.stopPropagation(); editDocument('${doc.id}')" 
+                            class="text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
+                        <span class="material-symbols-outlined text-xl">edit</span>
+                    </button>
                     <button onclick="event.stopPropagation(); deleteDocument('${doc.id}')" class="text-red-500 hover:text-red-700 dark:hover:text-red-400 transition-colors">
                         <span class="material-symbols-outlined text-xl">delete</span>
                     </button>
@@ -165,6 +169,18 @@ function displayDocuments(documents) {
     }).join('');
 
     documentsTbody.innerHTML = rows;
+}
+
+function editDocument(documentId) {
+    // Find the document in our allDocuments array
+    const doc = allDocuments.find(d => d.id === documentId);
+    if (!doc) return;
+
+    // Save the document in localStorage so the next page can read it
+    localStorage.setItem("selectedDocument", JSON.stringify(doc));
+
+    // Redirect to details page
+    window.location.href = "docDetail.html";
 }
 
 // Get status badge class
