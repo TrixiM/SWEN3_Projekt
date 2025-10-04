@@ -1,5 +1,7 @@
 package fhtw.wien.service;
 
+import fhtw.wien.business.DocumentBusinessLogic;
+import fhtw.wien.business.PdfRenderingBusinessLogic;
 import fhtw.wien.domain.Document;
 import fhtw.wien.exception.NotFoundException;
 import fhtw.wien.repo.DocumentRepo;
@@ -17,12 +19,16 @@ import static org.mockito.Mockito.*;
 class DocumentServiceTest {
 
     private DocumentRepo repo;
+    private DocumentBusinessLogic documentBusinessLogic;
+    private PdfRenderingBusinessLogic pdfRenderingBusinessLogic;
     private DocumentService service;
 
     @BeforeEach
     void setUp() {
         repo = mock(DocumentRepo.class);
-        service = new DocumentService(repo);
+        documentBusinessLogic = new DocumentBusinessLogic(repo);
+        pdfRenderingBusinessLogic = mock(PdfRenderingBusinessLogic.class);
+        service = new DocumentService(documentBusinessLogic, pdfRenderingBusinessLogic);
     }
 
 //    @Test

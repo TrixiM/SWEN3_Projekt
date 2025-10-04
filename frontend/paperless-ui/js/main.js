@@ -308,19 +308,14 @@ function showMessage(message, type) {
 }
 
 // PDF Preview functionality
-let currentPdfDoc = null;
+let currentDocumentId = null;
 let currentPage = 1;
 let totalPages = 0;
-
-// Configure PDF.js worker
-if (typeof pdfjsLib !== 'undefined') {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-}
 
 async function openPdfPreview(documentId, title) {
     const modal = document.getElementById('pdf-modal');
     const modalTitle = document.getElementById('pdf-modal-title');
-    const canvas = document.getElementById('pdf-canvas');
+    const image = document.getElementById('pdf-image');
     const loading = document.getElementById('pdf-loading');
     const error = document.getElementById('pdf-error');
 
@@ -328,26 +323,20 @@ async function openPdfPreview(documentId, title) {
     modal.classList.remove('hidden');
     modalTitle.textContent = title;
 
-    // Hide canvas and error, show loading
-    canvas.style.display = 'none';
+    // Hide image and error, show loading
+    image.style.display = 'none';
     loading.style.display = 'block';
     error.classList.add('hidden');
 
     try {
-        // Fetch the PDF document
-        // Note: You'll need to implement an endpoint to get the PDF content
-        // For now, we'll use a placeholder URL
-        const response = await fetch(`${API_BASE}/documents/${documentId}/content`);
-
-        if (!response.ok) {
-            throw new Error(`Failed to load PDF: ${response.status}`);
+        // Fetch page count from backend
+        const countResponse = await fetch(`${API_BASE}/documents/${documentId}/pages/count`);
+        if (!countResponse.ok) {
+            throw new Error(`Failed to load PDF: ${countResponse.status}`);
         }
 
-        const arrayBuffer = await response.arrayBuffer();
-        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-
-        currentPdfDoc = await loadingTask.promise;
-        totalPages = currentPdfDoc.numPages;
+        totalPages = await countResponse.json();
+        currentDocumentId = documentId;
         currentPage = 1;
 
         // Update page counter
@@ -357,38 +346,40 @@ async function openPdfPreview(documentId, title) {
         // Render first page
         await renderPage(currentPage);
 
-        // Hide loading, show canvas
+        // Hide loading, show image
         loading.style.display = 'none';
-        canvas.style.display = 'block';
+        image.style.display = 'block';
 
     } catch (err) {
         console.error('Error loading PDF:', err);
         loading.style.display = 'none';
         error.classList.remove('hidden');
-        error.textContent = `Error loading PDF: ${err.message}. Make sure the document content endpoint is implemented.`;
+        error.textContent = `Error loading PDF: ${err.message}`;
     }
 }
 
 async function renderPage(pageNum) {
-    if (!currentPdfDoc) return;
+    if (!currentDocumentId) return;
 
     try {
-        const page = await currentPdfDoc.getPage(pageNum);
-        const canvas = document.getElementById('pdf-canvas');
-        const context = canvas.getContext('2d');
+        const image = document.getElementById('pdf-image');
+        const loading = document.getElementById('pdf-loading');
 
-        // Calculate scale to fit the canvas to the modal
-        const viewport = page.getViewport({ scale: 1.5 });
+        // Show loading while fetching
+        loading.style.display = 'block';
+        image.style.display = 'none';
 
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
+        // Fetch rendered page from backend
+        const response = await fetch(`${API_BASE}/documents/${currentDocumentId}/pages/${pageNum}?scale=1.5`);
+        if (!response.ok) {
+            throw new Error(`Failed to render page: ${response.status}`);
+        }
 
-        const renderContext = {
-            canvasContext: context,
-            viewport: viewport
-        };
+        const blob = await response.blob();
+        const imageUrl = URL.createObjectURL(blob);
 
-        await page.render(renderContext).promise;
+        // Update image
+        image.src = imageUrl;
 
         // Update page number display
         document.getElementById('page-num').textContent = pageNum;
@@ -397,8 +388,15 @@ async function renderPage(pageNum) {
         document.getElementById('prev-page').disabled = pageNum === 1;
         document.getElementById('next-page').disabled = pageNum === totalPages;
 
+        // Hide loading, show image
+        loading.style.display = 'none';
+        image.style.display = 'block';
+
     } catch (err) {
         console.error('Error rendering page:', err);
+        const error = document.getElementById('pdf-error');
+        error.classList.remove('hidden');
+        error.textContent = `Error rendering page: ${err.message}`;
     }
 }
 
@@ -407,10 +405,12 @@ function closePdfModal() {
     modal.classList.add('hidden');
 
     // Clean up
-    if (currentPdfDoc) {
-        currentPdfDoc.destroy();
-        currentPdfDoc = null;
+    const image = document.getElementById('pdf-image');
+    if (image.src) {
+        URL.revokeObjectURL(image.src);
+        image.src = '';
     }
+    currentDocumentId = null;
     currentPage = 1;
     totalPages = 0;
 }

@@ -34,6 +34,7 @@ public class DocumentController {
             @RequestParam("file") MultipartFile file,
             @RequestParam("title") String title
     ) throws IOException {
+        // Controller only handles HTTP concerns: file upload, request validation, response mapping
         var doc = new Document(
                 title,
                 file.getOriginalFilename(),
@@ -45,6 +46,7 @@ public class DocumentController {
                 null
         );
         doc.setPdfData(file.getBytes());
+
         var saved = service.create(doc);
         var body = toResponse(saved);
         return ResponseEntity.created(URI.create("/v1/documents/" + saved.getId())).body(body);
@@ -52,6 +54,7 @@ public class DocumentController {
 
     @GetMapping
     public List<DocumentResponse> getAll() {
+        // Controller only handles HTTP concerns: response mapping
         return service.getAll().stream()
                 .map(DocumentController::toResponse)
                 .toList();
@@ -59,11 +62,13 @@ public class DocumentController {
 
     @GetMapping("{id}")
     public DocumentResponse get(@PathVariable UUID id) {
+        // Controller only handles HTTP concerns: response mapping
         return toResponse(service.get(id));
     }
 
     @GetMapping("{id}/content")
     public ResponseEntity<byte[]> getContent(@PathVariable UUID id) {
+        // Controller only handles HTTP concerns: response headers
         var doc = service.get(id);
         if (doc.getPdfData() == null) {
             return ResponseEntity.notFound().build();
@@ -77,9 +82,33 @@ public class DocumentController {
         return new ResponseEntity<>(doc.getPdfData(), headers, HttpStatus.OK);
     }
 
+    @GetMapping("{id}/pages/{pageNumber}")
+    public ResponseEntity<byte[]> renderPage(
+            @PathVariable UUID id,
+            @PathVariable int pageNumber,
+            @RequestParam(defaultValue = "1.5") float scale
+    ) {
+        // Controller only handles HTTP concerns: request params, response headers
+        byte[] imageBytes = service.renderPdfPage(id, pageNumber, scale);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.IMAGE_PNG);
+        headers.setCacheControl("max-age=3600");
+
+        return new ResponseEntity<>(imageBytes, headers, HttpStatus.OK);
+    }
+
+    @GetMapping("{id}/pages/count")
+    public ResponseEntity<Integer> getPageCount(@PathVariable UUID id) {
+        // Controller only handles HTTP concerns: response wrapping
+        int pageCount = service.getPdfPageCount(id);
+        return ResponseEntity.ok(pageCount);
+    }
+
     @DeleteMapping("{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable UUID id) {
+        // Controller only handles HTTP concerns: status code
         service.delete(id);
     }
 

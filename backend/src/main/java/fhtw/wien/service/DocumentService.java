@@ -1,10 +1,9 @@
 package fhtw.wien.service;
 
-import fhtw.wien.exception.NotFoundException;
+import fhtw.wien.business.DocumentBusinessLogic;
+import fhtw.wien.business.PdfRenderingBusinessLogic;
 import fhtw.wien.domain.Document;
-import fhtw.wien.repo.DocumentRepo;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -12,32 +11,38 @@ import java.util.UUID;
 @Service
 public class DocumentService {
 
-    private final DocumentRepo repository;
+    private final DocumentBusinessLogic documentBusinessLogic;
+    private final PdfRenderingBusinessLogic pdfRenderingBusinessLogic;
 
-    public DocumentService(DocumentRepo repository) {
-        this.repository = repository;
+    public DocumentService(DocumentBusinessLogic documentBusinessLogic,
+                          PdfRenderingBusinessLogic pdfRenderingBusinessLogic) {
+        this.documentBusinessLogic = documentBusinessLogic;
+        this.pdfRenderingBusinessLogic = pdfRenderingBusinessLogic;
     }
 
-    @Transactional
     public Document create(Document doc) {
-        return repository.save(doc);
+        return documentBusinessLogic.createDocument(doc);
     }
 
-    @Transactional(readOnly = true)
     public Document get(UUID id) {
-        return repository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Document not found: " + id));
+        return documentBusinessLogic.getDocumentById(id);
     }
 
-    @Transactional(readOnly = true)
     public List<Document> getAll() {
-        return repository.findAll();
+        return documentBusinessLogic.getAllDocuments();
     }
 
-    @Transactional
     public void delete(UUID id) {
-        var existing = repository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Document not found: " + id));
-        repository.deleteById(existing.getId());
+        documentBusinessLogic.deleteDocument(id);
+    }
+
+    public byte[] renderPdfPage(UUID id, int pageNumber, float scale) {
+        var doc = documentBusinessLogic.getDocumentById(id);
+        return pdfRenderingBusinessLogic.renderPdfPage(doc, pageNumber, scale);
+    }
+
+    public int getPdfPageCount(UUID id) {
+        var doc = documentBusinessLogic.getDocumentById(id);
+        return pdfRenderingBusinessLogic.getPdfPageCount(doc);
     }
 }
