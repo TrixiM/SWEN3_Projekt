@@ -103,6 +103,33 @@ document.addEventListener("DOMContentLoaded", () => {
     home.addEventListener("click", () => {
         window.location.href="index.html";
     })
+
+    // Update a doc
+    async function updateDocument(documentId, updatedData) {
+        try {
+            const response = await fetch(`${API_BASE}/documents/${documentId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(updatedData)
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const updated = await response.json();
+            console.log('Document updated:', updated);
+            return updated;
+
+        } catch (error) {
+            console.error('Error updating document:', error);
+            showMessage(`Error updating document: ${error.message}`, 'danger');
+            throw error;
+        }
+    }
+
     // Edit button
     editBtn.addEventListener("click", () => {
         fields.forEach(id => document.getElementById(id).readOnly = false);
@@ -121,4 +148,35 @@ document.addEventListener("DOMContentLoaded", () => {
         cancelBtn.classList.add("hidden");
         saveBtn.classList.add("hidden");
     });
+
+    saveBtn.addEventListener("click", async () => {
+        if (!doc.id) return;
+
+        // Gather updated values from form
+        const updatedDoc = {
+            id: doc.id,
+            title: document.getElementById("title").value,
+            originalFilename: document.getElementById("filename").value,
+            contentType: document.getElementById("content-type").value,
+            status: document.getElementById("status").value,
+            summary: document.getElementById("summary").value,
+            sizeBytes: doc.sizeBytes,
+            createdAt: doc.createdAt,
+            updatedAt: new Date().toISOString(),
+            checksum: doc.checksum,
+            tags: doc.tags || []
+        };
+
+        try {
+            const updated = await updateDocument(doc.id, updatedDoc);
+
+            // Save banner message and redirect back
+            sessionStorage.setItem("bannerMessage", `Document "${updated.title}" was updated successfully!`);
+            window.location.href = "index.html";
+        } catch (err) {
+            console.error("Update failed:", err);
+            showMessage(`Error updating document: ${err.message}`, 'danger');
+        }
+    });
+
 });
