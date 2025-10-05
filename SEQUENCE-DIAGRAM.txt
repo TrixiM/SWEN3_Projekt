@@ -1,0 +1,216 @@
+═══════════════════════════════════════════════════════════════════════════════
+  DOCUMENT UPLOAD AND OCR PROCESSING - COMPLETE SEQUENCE DIAGRAM
+═══════════════════════════════════════════════════════════════════════════════
+
+Time flows from top to bottom ↓
+
+User          Controller        Service       Producer      RabbitMQ      Consumer
+ │               │                │              │             │            │
+ │  POST /docs  │                │              │             │            │
+ │─────────────>│                │              │             │            │
+ │              │                │              │             │            │
+ │              │ create(doc)    │              │             │            │
+ │              │───────────────>│              │             │            │
+ │              │                │              │             │            │
+ │              │                │ Save to DB   │             │            │
+ │              │                │──────────┐   │             │            │
+ │              │                │          │   │             │            │
+ │              │                │<─────────┘   │             │            │
+ │              │                │              │             │            │
+ │              │                │ publish()    │             │            │
+ │              │                │─────────────>│             │            │
+ │              │                │              │             │            │
+ │              │                │              │ Send Message│            │
+ │              │                │              │────────────>│            │
+ │              │                │              │             │            │
+ │              │                │              │             │ Routes to  │
+ │              │                │              │             │ Queue      │
+ │              │                │              │             │───────┐    │
+ │              │                │              │             │       │    │
+ │              │                │              │             │<──────┘    │
+ │              │                │              │             │            │
+ │  201 Created │                │              │             │ Message    │
+ │<─────────────│                │              │             │ Available  │
+ │              │                │              │             │            │
+ │              │                │              │             │            │
+ │              │                │              │             │@RabbitListener
+ │              │                │              │             │  triggers  │
+ │              │                │              │             │            │
+ │              │                │              │             │ Deliver Msg│
+ │              │                │              │             │───────────>│
+ │              │                │              │             │            │
+ │              │                │              │             │            │
+ │              │                │              │             │  Process   │
+ │              │                │              │             │  Document  │
+ │              │                │              │             │  ┌────┐    │
+ │              │                │              │             │  │OCR │    │
+ │              │                │              │             │  │Work│    │
+ │              │                │              │             │  └────┘    │
+ │              │                │              │             │            │
+ │              │                │              │             │  Send ACK  │
+ │              │                │              │             │<───────────│
+ │              │                │              │             │            │
+ │              │                │              │             │            │
+
+
+═══════════════════════════════════════════════════════════════════════════════
+  KEY COMPONENTS
+═══════════════════════════════════════════════════════════════════════════════
+
+Controller  = DocumentController.java (REST Server)
+Service     = DocumentService.java (REST Server)
+Producer    = DocumentMessageProducer.java (REST Server)
+RabbitMQ    = Message Queue Server (separate container)
+Consumer    = OcrMessageConsumer.java (OCR Worker)
+
+═══════════════════════════════════════════════════════════════════════════════
+  RABBITMQ INTERNAL FLOW
+═══════════════════════════════════════════════════════════════════════════════
+
+Producer sends message:
+  └─> Exchange: "document.exchange"
+      Routing Key: "document.created"
+      Payload: {id: "xxx", title: "test.pdf", ...}
+
+Exchange routes message:
+  └─> Checks routing key: "document.created"
+      └─> Finds binding to: "document.created.queue"
+          └─> Places message in queue
+
+Consumer receives message:
+  └─> @RabbitListener polls: "document.created.queue"
+      └─> Message available? YES
+          └─> Deserialize JSON to DocumentResponse
+              └─> Call handleDocumentCreated(document)
+
+═══════════════════════════════════════════════════════════════════════════════
+  RABBITMQ CONFIGURATION (Why Two Configs?)
+═══════════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  REST SERVER - RabbitMQConfig.java                                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Purpose: Configure queues that REST server uses                            │
+│                                                                              │
+│  Creates:                                                                    │
+│    • Exchange: "document.exchange"                                           │
+│    • Queue: "document.created.queue" ─┐                                     │
+│    • Queue: "document.deleted.queue"  │─── REST server PUBLISHES to these  │
+│    • Queue: "document.created.ack.queue"                                    │
+│    • Queue: "document.deleted.ack.queue" ─── REST server CONSUMES from this│
+│    • Bindings for all of the above                                          │
+│                                                                              │
+│  Used by:                                                                    │
+│    • DocumentMessageProducer (to send)                                      │
+│    • DocumentMessageConsumer (to receive deletion acks)                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  OCR WORKER - RabbitMQConfig.java                                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Purpose: Configure queues that OCR worker uses                             │
+│                                                                              │
+│  Creates:                                                                    │
+│    • Exchange: "document.exchange" (SAME as REST server)                    │
+│    • Queue: "document.created.queue" ───── OCR worker CONSUMES from this   │
+│    • Queue: "document.created.ack.queue" ─ OCR worker PUBLISHES to this    │
+│    • Bindings for these two                                                 │
+│                                                                              │
+│  Used by:                                                                    │
+│    • OcrMessageConsumer (to receive)                                        │
+│    • RabbitTemplate (to send acks)                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+IMPORTANT: When both apps start, RabbitMQ sees:
+  "Oh, 'document.exchange' already exists? OK, no problem."
+  "Oh, 'document.created.queue' already exists? OK, no problem."
+  
+RabbitMQ DOES NOT create duplicates! It's idempotent.
+Both apps can declare the same resources safely.
+
+═══════════════════════════════════════════════════════════════════════════════
+  CODE EXECUTION TRACE - Line by Line
+═══════════════════════════════════════════════════════════════════════════════
+
+[1] User: curl -X POST http://localhost:8080/v1/documents -F file=@test.pdf
+
+[2] DocumentController.java:34
+    └─> @PostMapping method receives: MultipartFile file, String title
+
+[3] DocumentController.java:39-49
+    └─> Creates Document object with metadata
+
+[4] DocumentController.java:51
+    └─> Calls: service.create(doc)
+
+[5] DocumentService.java:29
+    └─> Calls: documentBusinessLogic.createOrUpdateDocument(doc)
+    └─> This saves to PostgreSQL
+
+[6] DocumentService.java:31
+    └─> Calls: toDocumentResponse(created)
+    └─> Converts Document to DocumentResponse DTO
+
+[7] DocumentService.java:32
+    └─> Calls: messageProducer.publishDocumentCreated(response)
+    └─> *** KEY STEP: Publishes to RabbitMQ ***
+
+[8] DocumentMessageProducer.java:25-29
+    └─> Calls: rabbitTemplate.convertAndSend(
+            "document.exchange",       ← Exchange
+            "document.created",        ← Routing key
+            document                   ← Payload (auto-converted to JSON)
+        )
+    └─> Message sent to RabbitMQ!
+
+[9] RabbitMQ Server (internal)
+    └─> Receives message at exchange "document.exchange"
+    └─> Looks up routing key "document.created"
+    └─> Finds binding to "document.created.queue"
+    └─> Places message in queue
+    └─> Message waits for consumer...
+
+[10] OcrMessageConsumer.java:22
+     └─> @RabbitListener continuously polls "document.created.queue"
+     └─> New message available? YES!
+     └─> Spring calls: handleDocumentCreated(DocumentResponse document)
+     └─> Parameter automatically deserialized from JSON
+
+[11] OcrMessageConsumer.java:24-31
+     └─> Logs document details
+
+[12] OcrMessageConsumer.java:45
+     └─> Thread.sleep(1000) - Simulates OCR processing
+
+[13] OcrMessageConsumer.java:55-59
+     └─> Calls: rabbitTemplate.convertAndSend(
+             "document.exchange",          ← Same exchange
+             "document.created.ack",       ← Different routing key
+             ackMessage                    ← Acknowledgment string
+         )
+     └─> Sends acknowledgment back to RabbitMQ
+
+[14] Done! Document is saved and processed.
+
+═══════════════════════════════════════════════════════════════════════════════
+  WHAT EACH FILE DOES
+═══════════════════════════════════════════════════════════════════════════════
+
+REST SERVER:
+  DocumentController.java       - Receives HTTP requests
+  DocumentService.java          - Business logic, triggers messaging
+  DocumentMessageProducer.java  - Sends messages to RabbitMQ
+  RabbitMQConfig.java           - Defines queues/exchanges for REST server
+
+OCR WORKER:
+  OcrWorkerApplication.java     - Spring Boot main class
+  OcrMessageConsumer.java       - Receives and processes messages
+  RabbitMQConfig.java           - Defines queues/exchanges for OCR worker
+  DocumentResponse.java         - DTO for message structure
+  DocumentStatus.java           - Enum for document status
+
+SHARED (by name, not code):
+  Queue: "document.created.queue"  - Both apps use this queue
+  Exchange: "document.exchange"     - Both apps use this exchange
+
+═══════════════════════════════════════════════════════════════════════════════
