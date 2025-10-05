@@ -74,6 +74,20 @@ services:
     networks:
       - app-network
 
+  ocr-worker:
+    build:
+      context: ./ocr-worker
+      dockerfile: DOCKERFILE.OCR
+    container_name: ocr-worker
+    restart: always
+    depends_on:
+      - rabbitmq
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+    networks:
+      - app-network
+
 
 networks:
   app-network:
