@@ -15,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.net.URI;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -51,6 +52,59 @@ public class DocumentController {
         var body = toResponse(saved);
         return ResponseEntity.created(URI.create("/v1/documents/" + saved.getId())).body(body);
     }
+
+    @PutMapping("{id}") //still in construction
+    public ResponseEntity<DocumentResponse> update(
+            @PathVariable UUID id,
+            @RequestBody Document updateRequest) {
+
+        // get existing document from DB
+        Document existing = service.get(id);
+
+        // needs to be refined
+        if (updateRequest.getTitle() != null) {
+            existing.setTitle(updateRequest.getTitle());
+        }
+        if (updateRequest.getOriginalFilename() != null) {
+            existing.setOriginalFilename(updateRequest.getOriginalFilename());
+        }
+        if (updateRequest.getContentType() != null) {
+            existing.setContentType(updateRequest.getContentType());
+        }
+        if (updateRequest.getStatus() != null) {
+            existing.setStatus(updateRequest.getStatus());
+        }
+        if (updateRequest.getChecksumSha256() != null) {
+            existing.setChecksumSha256(updateRequest.getChecksumSha256());
+        }
+        if (updateRequest.getPdfData() != null) {
+            existing.setPdfData(updateRequest.getPdfData());
+        }
+        // Endpoint still needs to be refined w optional and non editable fields
+
+        existing.setUpdatedAt(Instant.now()); // update timestamp
+
+        Document updated = service.update(existing);
+
+        DocumentResponse response = new DocumentResponse(
+                updated.getId(),
+                updated.getTitle(),
+                updated.getOriginalFilename(),
+                updated.getContentType(),
+                updated.getSizeBytes(),
+                updated.getBucket(),
+                updated.getObjectKey(),
+                updated.getStorageUri(),
+                updated.getChecksumSha256(),
+                updated.getStatus(),
+                updated.getVersion(),
+                updated.getCreatedAt(),
+                updated.getUpdatedAt()
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
 
     @GetMapping
     public List<DocumentResponse> getAll() {

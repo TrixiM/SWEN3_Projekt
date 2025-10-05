@@ -19,7 +19,7 @@ public class DocumentBusinessLogic {
     }
 
     @Transactional
-    public Document createDocument(Document doc) {
+    public Document createOrUpdateDocument(Document doc) {
         return repository.save(doc);
     }
 

@@ -26,12 +26,20 @@ public class DocumentService {
     }
 
     public Document create(Document doc) {
-        Document created = documentBusinessLogic.createDocument(doc);
+        Document created = documentBusinessLogic.createOrUpdateDocument(doc);
         // Publish message after document is created
         DocumentResponse response = toDocumentResponse(created);
         messageProducer.publishDocumentCreated(response);
         return created;
     }
+
+    public Document update(Document doc) {
+        Document updated = documentBusinessLogic.createOrUpdateDocument(doc);
+        // Publish message after document is created
+        DocumentResponse response = toDocumentResponse(updated);
+        return updated;
+    }
+
 
     public Document get(UUID id) {
         return documentBusinessLogic.getDocumentById(id);
