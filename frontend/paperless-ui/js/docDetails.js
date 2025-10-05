@@ -6,6 +6,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const doc = JSON.parse(stored);
     const fields = ["title", "filename", "content-type", "size", "status", "created", "updated", "checksum", "summary"];
+    const editableFields = ["title", "status", "summary"];
 
     function fillFields() {
         document.getElementById("title").value = doc.title || "";
@@ -22,8 +23,14 @@ document.addEventListener("DOMContentLoaded", () => {
     fillFields();
 
     // Make fields read-only initially
-    fields.forEach(id => document.getElementById(id).readOnly = true);
-
+    fields.forEach(id => {
+        const el = document.getElementById(id);
+        if (el.tagName === "SELECT") {
+            el.disabled = true;
+        } else {
+            el.readOnly = true;
+        }
+    });
     // Hide Save and Cancel initially
     document.getElementById("cancel").classList.add("hidden");
     document.getElementById("save").classList.add("hidden");
@@ -132,8 +139,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Edit button
     editBtn.addEventListener("click", () => {
-        fields.forEach(id => document.getElementById(id).readOnly = false);
-        editBtn.classList.add("hidden");
+        editableFields.forEach(id => {
+            const el = document.getElementById(id);
+            if (el.tagName === "SELECT") {
+                el.disabled = false;
+            } else {
+                el.readOnly = false;
+            }
+        });        editBtn.classList.add("hidden");
         deleteBtn.classList.add("hidden");
         cancelBtn.classList.remove("hidden");
         saveBtn.classList.remove("hidden");
@@ -142,8 +155,14 @@ document.addEventListener("DOMContentLoaded", () => {
     // Cancel button
     cancelBtn.addEventListener("click", () => {
         fillFields();
-        fields.forEach(id => document.getElementById(id).readOnly = true);
-        editBtn.classList.remove("hidden");
+        fields.forEach(id => {
+            const el = document.getElementById(id);
+            if (el.tagName === "SELECT") {
+                el.disabled = true;
+            } else {
+                el.readOnly = true;
+            }
+        });        editBtn.classList.remove("hidden");
         deleteBtn.classList.remove("hidden");
         cancelBtn.classList.add("hidden");
         saveBtn.classList.add("hidden");
@@ -156,8 +175,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const updatedDoc = {
             id: doc.id,
             title: document.getElementById("title").value,
-            originalFilename: document.getElementById("filename").value,
-            contentType: document.getElementById("content-type").value,
+            originalFilename: doc.filename,
+            contentType: doc.contentType,
             status: document.getElementById("status").value,
             summary: document.getElementById("summary").value,
             sizeBytes: doc.sizeBytes,
