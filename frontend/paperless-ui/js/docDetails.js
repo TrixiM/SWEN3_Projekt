@@ -122,7 +122,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const tags = doc.tags || [];
         doc.tags.push(tag);
 
-        const updatedDoc = {
+        /*const updatedDoc = {  //tags missing in backend
             id: doc.id,
             title: doc.title,
             originalFilename: doc.filename,
@@ -133,7 +133,6 @@ document.addEventListener("DOMContentLoaded", () => {
             createdAt: doc.createdAt,
             updatedAt: new Date().toISOString(),
             checksum: doc.checksum,
-            tags: doc.tags || []
         };
 
         try {
@@ -145,7 +144,7 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (err) {
             console.error("Update failed:", err);
             showMessage(`Error updating document: ${err.message}`, 'danger');
-        }
+        }*/
 
         const tagEl = document.createElement("span");
         tagEl.textContent = tag;
@@ -155,6 +154,13 @@ document.addEventListener("DOMContentLoaded", () => {
         bg-primary/10 text-primary 
         dark:bg-primary/20 dark:text-primary
     `;
+        tagEl.addEventListener("click", () => {
+            tagEl.classList.toggle("selected");
+            tagEl.classList.toggle("bg-red-100");
+            tagEl.classList.toggle("text-red-700");
+            tagEl.classList.toggle("border");
+            tagEl.classList.toggle("border-red-300");
+        })
 
         // Append to container
         const tagsContainer = document.querySelector("#tags-container");
@@ -164,6 +170,29 @@ document.addEventListener("DOMContentLoaded", () => {
     })
 
     removeTagBtn.addEventListener("click", () => {
+        const getAllTags = document.querySelectorAll("#tags-container");
+        const getSelectedTag = document.querySelectorAll(".selected");
+        if (getSelectedTag.length === 0) return; //no tags selected for removal
+
+        getSelectedTag.forEach(tagEl => {
+            const tagText = tagEl.textContent;
+            // Remove from DOM
+            tagEl.remove();
+            // Remove from array
+            doc.tags = doc.tags.filter(t => t !== tagText);
+        });
+
+        /*const updatedDoc = { //tags missing
+            id: doc.id,
+            title: doc.title,
+            originalFilename: doc.filename,
+            contentType: doc.contentType,
+            status: doc.status,
+            summary: doc.summary,
+            sizeBytes: doc.sizeBytes,
+            createdAt: doc.createdAt,
+            updatedAt: new Date().toISOString(),
+        }*/
     })
 
 
