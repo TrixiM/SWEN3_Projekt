@@ -44,11 +44,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Buttons
+    const addTagBtn = document.getElementById("addTag");
+    const removeTagBtn = document.getElementById("removeTag");
     const editBtn = document.getElementById("editDoc");
     const deleteBtn = document.getElementById("deleteDoc");
     const cancelBtn = document.getElementById("cancel");
     const saveBtn = document.getElementById("save");
-    const home = document.getElementById("home")
+    const home = document.getElementById("home");
 
     // Delete a document
     async function deleteDocument(documentId) {
@@ -105,6 +107,64 @@ document.addEventListener("DOMContentLoaded", () => {
                 showMessage(`Error deleting document: ${err.message}`, 'danger');
             });
     });
+
+    addTagBtn.addEventListener("click", async () => {
+        const tag = prompt("Enter a tag");
+        if (!tag) return;
+        if (!Array.isArray(doc.tags))
+            doc.tags = [];
+
+        // Prevent duplicates (optional)
+        if (doc.tags.includes(tag)) {
+            showMessage(`Tag "${tag}" already exists.`, 'info');
+            return;
+        }
+        const tags = doc.tags || [];
+        doc.tags.push(tag);
+
+        const updatedDoc = {
+            id: doc.id,
+            title: doc.title,
+            originalFilename: doc.filename,
+            contentType: doc.contentType,
+            status: doc.status,
+            summary: doc.summary,
+            sizeBytes: doc.sizeBytes,
+            createdAt: doc.createdAt,
+            updatedAt: new Date().toISOString(),
+            checksum: doc.checksum,
+            tags: doc.tags || []
+        };
+
+        try {
+            const updated = await updateDocument(doc.id, updatedDoc);
+
+            // Save banner message and redirect back
+            sessionStorage.setItem("bannerMessage", `Tag "${tag}" was added successfully to document "${updated.title}"`);
+
+        } catch (err) {
+            console.error("Update failed:", err);
+            showMessage(`Error updating document: ${err.message}`, 'danger');
+        }
+
+        const tagEl = document.createElement("span");
+        tagEl.textContent = tag;
+        tagEl.className = `
+        inline-flex items-center px-3 py-1 
+        rounded-full text-sm font-medium 
+        bg-primary/10 text-primary 
+        dark:bg-primary/20 dark:text-primary
+    `;
+
+        // Append to container
+        const tagsContainer = document.querySelector("#tags-container");
+        tagsContainer.appendChild(tagEl);
+
+
+    })
+
+    removeTagBtn.addEventListener("click", () => {
+    })
 
 
     home.addEventListener("click", () => {
