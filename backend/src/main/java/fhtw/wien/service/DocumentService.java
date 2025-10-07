@@ -111,6 +111,7 @@ public class DocumentService {
                 d.getStorageUri(),
                 d.getChecksumSha256(),
                 d.getStatus(),
+                d.getTags(),
                 d.getVersion(),
                 d.getCreatedAt(),
                 d.getUpdatedAt()

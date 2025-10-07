@@ -38,7 +38,8 @@ public class DocumentController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<DocumentResponse> create(
             @RequestParam("file") MultipartFile file,
-            @RequestParam("title") String title
+            @RequestParam("title") String title,
+            @RequestParam(value = "tags", required = false) List<String> tags
     ) throws IOException {
         log.info("POST /v1/documents - Creating document with title: {}, filename: {}", title, file.getOriginalFilename());
         
@@ -59,6 +60,9 @@ public class DocumentController {
                 null
         );
         doc.setPdfData(file.getBytes());
+        if (tags != null && !tags.isEmpty()) {
+            doc.setTags(tags);
+        }
 
         var saved = service.create(doc);
         var body = toResponse(saved);
@@ -94,6 +98,9 @@ public class DocumentController {
         if (updateRequest.getPdfData() != null) {
             existing.setPdfData(updateRequest.getPdfData());
         }
+        if (updateRequest.getTags() != null) {
+            existing.setTags(updateRequest.getTags());
+        }
         // Endpoint still needs to be refined w optional and non editable fields
 
         existing.setUpdatedAt(Instant.now()); // update timestamp
@@ -111,6 +118,7 @@ public class DocumentController {
                 updated.getStorageUri(),
                 updated.getChecksumSha256(),
                 updated.getStatus(),
+                updated.getTags(),
                 updated.getVersion(),
                 updated.getCreatedAt(),
                 updated.getUpdatedAt()
@@ -214,6 +222,7 @@ public class DocumentController {
                 d.getStorageUri(),
                 d.getChecksumSha256(),
                 d.getStatus(),
+                d.getTags(),
                 d.getVersion(),
                 d.getCreatedAt(),
                 d.getUpdatedAt()

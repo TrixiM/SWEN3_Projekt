@@ -9,6 +9,8 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -53,6 +55,11 @@ public class Document {
     @Column(nullable = false, length = 32)
     private DocumentStatus status = DocumentStatus.NEW;
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "document_tags", joinColumns = @JoinColumn(name = "document_id"))
+    @Column(name = "tag")
+    private List<String> tags = new ArrayList<>();
+
     @Version
     @Column(nullable = false)
     private int version;
@@ -84,5 +91,6 @@ public class Document {
         this.storageUri = storageUri;
         this.checksumSha256 = checksumSha256;
         this.status = DocumentStatus.NEW;
+        this.tags = new ArrayList<>();
     }
 }
