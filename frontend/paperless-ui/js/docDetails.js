@@ -110,44 +110,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
     addTagBtn.addEventListener("click", async () => {
         const tag = prompt("Enter a tag");
-        if (!tag) return;
+        if (!tag || !tag.trim()) return;
+        
+        const trimmedTag = tag.trim();
+        
         if (!Array.isArray(doc.tags))
             doc.tags = [];
 
-        // Prevent duplicates (optional)
-        if (doc.tags.includes(tag)) {
-            showMessage(`Tag "${tag}" already exists.`, 'info');
+        // Prevent duplicates
+        if (doc.tags.includes(trimmedTag)) {
+            showMessage(`Tag "${trimmedTag}" already exists.`, 'info');
             return;
         }
-        const tags = doc.tags || [];
-        doc.tags.push(tag);
+        
+        doc.tags.push(trimmedTag);
 
-        /*const updatedDoc = {  //tags missing in backend
-            id: doc.id,
-            title: doc.title,
-            originalFilename: doc.filename,
-            contentType: doc.contentType,
-            status: doc.status,
-            summary: doc.summary,
-            sizeBytes: doc.sizeBytes,
-            createdAt: doc.createdAt,
-            updatedAt: new Date().toISOString(),
-            checksum: doc.checksum,
-        };
-
-        try {
-            const updated = await updateDocument(doc.id, updatedDoc);
-
-            // Save banner message and redirect back
-            sessionStorage.setItem("bannerMessage", `Tag "${tag}" was added successfully to document "${updated.title}"`);
-
-        } catch (err) {
-            console.error("Update failed:", err);
-            showMessage(`Error updating document: ${err.message}`, 'danger');
-        }*/
-
+        // Create the tag element
         const tagEl = document.createElement("span");
-        tagEl.textContent = tag;
+        tagEl.textContent = trimmedTag;
         tagEl.className = `
         inline-flex items-center px-3 py-1 
         rounded-full text-sm font-medium 
@@ -166,33 +146,78 @@ document.addEventListener("DOMContentLoaded", () => {
         const tagsContainer = document.querySelector("#tags-container");
         tagsContainer.appendChild(tagEl);
 
-
-    })
-
-    removeTagBtn.addEventListener("click", () => {
-        const getAllTags = document.querySelectorAll("#tags-container");
-        const getSelectedTag = document.querySelectorAll(".selected");
-        if (getSelectedTag.length === 0) return; //no tags selected for removal
-
-        getSelectedTag.forEach(tagEl => {
-            const tagText = tagEl.textContent;
-            // Remove from DOM
-            tagEl.remove();
-            // Remove from array
-            doc.tags = doc.tags.filter(t => t !== tagText);
-        });
-
-        /*const updatedDoc = { //tags missing
+        // Immediately persist the tag to backend
+        const updatedDoc = {
             id: doc.id,
             title: doc.title,
-            originalFilename: doc.filename,
+            originalFilename: doc.originalFilename,
             contentType: doc.contentType,
             status: doc.status,
-            summary: doc.summary,
             sizeBytes: doc.sizeBytes,
-            createdAt: doc.createdAt,
-            updatedAt: new Date().toISOString(),
-        }*/
+            tags: doc.tags
+        };
+
+        try {
+            const updated = await updateDocument(doc.id, updatedDoc);
+            doc.tags = updated.tags || doc.tags; // Update from server response
+            showMessage(`Tag "${trimmedTag}" added successfully!`, 'success');
+        } catch (err) {
+            console.error("Failed to add tag:", err);
+            // Rollback on failure
+            doc.tags = doc.tags.filter(t => t !== trimmedTag);
+            tagEl.remove();
+            showMessage(`Error adding tag: ${err.message}`, 'danger');
+        }
+    })
+
+    removeTagBtn.addEventListener("click", async () => {
+        const getSelectedTag = document.querySelectorAll(".selected");
+        if (getSelectedTag.length === 0) {
+            showMessage('Please select tags to remove by clicking on them', 'info');
+            return;
+        }
+
+        // Store tags to remove and their elements
+        const tagsToRemove = [];
+        const elementsToRemove = [];
+        
+        getSelectedTag.forEach(tagEl => {
+            const tagText = tagEl.textContent;
+            tagsToRemove.push(tagText);
+            elementsToRemove.push(tagEl);
+        });
+
+        // Remove from array
+        const originalTags = [...doc.tags];
+        doc.tags = doc.tags.filter(t => !tagsToRemove.includes(t));
+
+        // Remove from DOM
+        elementsToRemove.forEach(el => el.remove());
+
+        // Immediately persist the change to backend
+        const updatedDoc = {
+            id: doc.id,
+            title: doc.title,
+            originalFilename: doc.originalFilename,
+            contentType: doc.contentType,
+            status: doc.status,
+            sizeBytes: doc.sizeBytes,
+            tags: doc.tags
+        };
+
+        try {
+            const updated = await updateDocument(doc.id, updatedDoc);
+            doc.tags = updated.tags || doc.tags; // Update from server response
+            showMessage(`Tag(s) removed successfully!`, 'success');
+        } catch (err) {
+            console.error("Failed to remove tags:", err);
+            // Rollback on failure
+            doc.tags = originalTags;
+            // Re-add elements to DOM
+            const tagsContainer = document.querySelector("#tags-container");
+            elementsToRemove.forEach(el => tagsContainer.appendChild(el));
+            showMessage(`Error removing tags: ${err.message}`, 'danger');
+        }
     })
 
 

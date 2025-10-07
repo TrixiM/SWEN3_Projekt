@@ -89,14 +89,15 @@ function filterDocuments() {
     const statusFilter = filterStatus?.value || '';
 
     const filtered = allDocuments.filter(doc => {
-        // Enhanced search filter - search across multiple fields
+        // Enhanced search filter - search across multiple fields including tags
         const matchesSearch = !searchTerm ||
             doc.title.toLowerCase().includes(searchTerm) ||
             doc.originalFilename.toLowerCase().includes(searchTerm) ||
             doc.contentType.toLowerCase().includes(searchTerm) ||
             doc.status.toLowerCase().includes(searchTerm) ||
             formatBytes(doc.sizeBytes).toLowerCase().includes(searchTerm) ||
-            (doc.id && doc.id.toLowerCase().includes(searchTerm));
+            (doc.id && doc.id.toLowerCase().includes(searchTerm)) ||
+            (doc.tags && doc.tags.some(tag => tag.toLowerCase().includes(searchTerm)));
 
         // Content type filter
         const matchesContentType = !contentTypeFilter ||
@@ -139,6 +140,13 @@ function displayDocuments(documents) {
         const isPdf = doc.contentType === 'application/pdf';
         const rowClass = isPdf ? 'cursor-pointer' : '';
         const onClickAttr = isPdf ? `onclick="openPdfPreview('${doc.id}', '${escapeHtml(doc.title)}')"` : '';
+        
+        // Format tags for display
+        const tagsHtml = doc.tags && doc.tags.length > 0 
+            ? `<div class="flex flex-wrap gap-1 mt-1">${doc.tags.map(tag => 
+                `<span class="px-2 py-0.5 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 rounded">${escapeHtml(tag)}</span>`
+              ).join('')}</div>`
+            : '';
 
         return `
             <tr class="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors ${rowClass}" ${onClickAttr}>
@@ -148,6 +156,7 @@ function displayDocuments(documents) {
                         ${escapeHtml(doc.title)}
                     </div>
                     <div class="text-xs text-muted-light dark:text-muted-dark">${escapeHtml(doc.originalFilename)}</div>
+                    ${tagsHtml}
                 </td>
                 <td class="px-6 py-4 text-muted-light dark:text-muted-dark">${escapeHtml(doc.contentType)}</td>
                 <td class="px-6 py-4 text-muted-light dark:text-muted-dark">${formatBytes(doc.sizeBytes)}</td>
@@ -184,6 +193,7 @@ function editDocument(documentId) {
 }
 
 // Get status badge class
+
 function getStatusClass(status) {
     switch (status) {
         case 'NEW':
@@ -210,14 +220,29 @@ async function handleFileUpload() {
         return;
     }
 
+    // Get tags input if exists
+    const tagsInput = document.getElementById('tags-input');
+    let tags = [];
+    if (tagsInput && tagsInput.value.trim()) {
+        // Split by comma and trim each tag
+        tags = tagsInput.value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+    }
+
     // Upload each file
     for (const file of files) {
         try {
             const formData = new FormData();
             formData.append('file', file);
             formData.append('title', file.name);
+            
+            // Append each tag as a separate form field
+            if (tags.length > 0) {
+                tags.forEach(tag => {
+                    formData.append('tags', tag);
+                });
+            }
 
-            console.log('Uploading document:', file.name);
+            console.log('Uploading document:', file.name, 'with tags:', tags);
 
             const response = await fetch(`${API_BASE}/documents`, {
                 method: 'POST',
@@ -240,8 +265,11 @@ async function handleFileUpload() {
         }
     }
 
-    // Clear the file input and reload documents
+    // Clear the file input, tags input, and reload documents
     fileInput.value = '';
+    if (tagsInput) {
+        tagsInput.value = '';
+    }
     loadDocuments();
 }
 

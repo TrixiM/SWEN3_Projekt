@@ -130,16 +130,26 @@
       </div>
       <div class="lg:col-span-1">
         <div class="bg-surface-light dark:bg-surface-dark p-6 rounded-lg shadow-sm h-full">
-          <label class="cursor-pointer flex flex-col items-center justify-center border-2 border-dashed border-border-light dark:border-border-dark rounded-xl h-full p-8 text-center hover:bg-background-light dark:hover:bg-background-dark transition-colors" for="file-upload">
-            <div class="flex flex-col items-center justify-center pt-5 pb-6">
-<span class="material-symbols-outlined text-5xl text-primary mb-4">
+          <h3 class="text-lg font-semibold text-foreground-light dark:text-foreground-dark mb-4">Upload Documents</h3>
+          <label class="cursor-pointer flex flex-col items-center justify-center border-2 border-dashed border-border-light dark:border-border-dark rounded-xl p-6 text-center hover:bg-background-light dark:hover:bg-background-dark transition-colors mb-4" for="file-upload">
+            <div class="flex flex-col items-center justify-center pt-3 pb-4">
+<span class="material-symbols-outlined text-4xl text-primary mb-2">
 cloud_upload
 </span>
-              <p class="mb-2 text-lg font-semibold text-foreground-light dark:text-foreground-dark">Drag &amp; Drop files here</p>
-              <p class="text-muted-light dark:text-muted-dark">or click to browse</p>
+              <p class="mb-1 text-base font-semibold text-foreground-light dark:text-foreground-dark">Drag &amp; Drop files here</p>
+              <p class="text-sm text-muted-light dark:text-muted-dark">or click to browse</p>
             </div>
             <input class="hidden" id="file-upload" multiple="" name="file-upload" type="file"/>
           </label>
+          <div class="mt-4">
+            <label class="block text-sm font-medium text-muted-light dark:text-muted-dark mb-2" for="tags-input">Tags (optional)</label>
+            <input 
+              class="w-full bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-light dark:placeholder:text-muted-dark" 
+              id="tags-input" 
+              placeholder="work, important, 2024" 
+              type="text"/>
+            <p class="text-xs text-muted-light dark:text-muted-dark mt-1">Separate tags with commas</p>
+          </div>
         </div>
       </div>
     </div>
