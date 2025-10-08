@@ -1,9 +1,7 @@
-version: "3.9"
-
 services:
   rest:
     build:
-      context: .
+      context: ./backend
       dockerfile: DOCKERFILE.REST
     container_name: rest-server
     restart: always
@@ -17,6 +15,21 @@ services:
       - "8080:8080"
     depends_on:
       - postgres
+    networks:
+      - app-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - rest
+    networks:
+      - app-network
 
   postgres:
     image: postgres:16
@@ -30,6 +43,8 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
 
   pgadmin:
     image: dpage/pgadmin4:latest
@@ -44,6 +59,37 @@ services:
       - postgres
     volumes:
       - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - app-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - app-network
+
+  ocr-worker:
+    build:
+      context: ./ocr-worker
+      dockerfile: DOCKERFILE.OCR
+    container_name: ocr-worker
+    restart: always
+    depends_on:
+      - rabbitmq
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+    networks:
+      - app-network
+
+
+networks:
+  app-network:
+    driver: bridge
 
 volumes:
   postgres_data:
