@@ -55,7 +55,7 @@ public class OcrMessageConsumer {
             rabbitTemplate.convertAndSend(
                     RabbitMQConfig.DOCUMENT_EXCHANGE,
                     "document.created.ack",
-                    ackMessage
+                    ackMessage //JavaObject verschicken
             );
             
             log.info("📤 Sent acknowledgment to queue");
