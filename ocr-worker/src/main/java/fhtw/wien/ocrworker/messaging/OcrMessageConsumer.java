@@ -2,11 +2,14 @@ package fhtw.wien.ocrworker.messaging;
 
 import fhtw.wien.ocrworker.config.RabbitMQConfig;
 import fhtw.wien.ocrworker.dto.DocumentResponse;
+import fhtw.wien.ocrworker.dto.OcrAcknowledgment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
+
+import java.time.Instant;
 
 @Component
 public class OcrMessageConsumer {
@@ -46,16 +49,18 @@ public class OcrMessageConsumer {
             
             log.info("✅ OCR processing completed successfully for document: {}", document.id());
             
-            // Send acknowledgment message back
-            String ackMessage = String.format(
-                    "✅ OCR Worker: Document '%s' (ID: %s) processed successfully",
-                    document.title(), document.id()
+            OcrAcknowledgment acknowledgment = new OcrAcknowledgment(
+                    document.id(),
+                    document.title(),
+                    "SUCCESS",
+                    "Document processed successfully",
+                    Instant.now()
             );
             
             rabbitTemplate.convertAndSend(
                     RabbitMQConfig.DOCUMENT_EXCHANGE,
                     "document.created.ack",
-                    ackMessage //JavaObject verschicken
+                    acknowledgment
             );
             
             log.info("📤 Sent acknowledgment to queue");
