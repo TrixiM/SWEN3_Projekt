@@ -8,16 +8,11 @@ import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import static fhtw.wien.config.MessagingConstants.*;
+
 @Configuration
 public class RabbitMQConfig {
 
-    public static final String DOCUMENT_EXCHANGE = "document.exchange";
-    public static final String DOCUMENT_CREATED_QUEUE = "document.created.queue";
-    public static final String DOCUMENT_DELETED_QUEUE = "document.deleted.queue";
-    public static final String DOCUMENT_CREATED_ACK_QUEUE = "document.created.ack.queue";
-    public static final String DOCUMENT_DELETED_ACK_QUEUE = "document.deleted.ack.queue";
-    public static final String DOCUMENT_CREATED_ROUTING_KEY = "document.created";
-    public static final String DOCUMENT_DELETED_ROUTING_KEY = "document.deleted";
 
     @Bean
     public DirectExchange documentExchange() {
@@ -62,14 +57,14 @@ public class RabbitMQConfig {
     public Binding documentCreatedAckBinding(Queue documentCreatedAckQueue, DirectExchange documentExchange) {
         return BindingBuilder.bind(documentCreatedAckQueue)
                 .to(documentExchange)
-                .with("document.created.ack");
+                .with(DOCUMENT_CREATED_ACK_ROUTING_KEY);
     }
 
     @Bean
     public Binding documentDeletedAckBinding(Queue documentDeletedAckQueue, DirectExchange documentExchange) {
         return BindingBuilder.bind(documentDeletedAckQueue)
                 .to(documentExchange)
-                .with("document.deleted.ack");
+                .with(DOCUMENT_DELETED_ACK_ROUTING_KEY);
     }
 
     @Bean

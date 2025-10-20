@@ -6,6 +6,7 @@ import fhtw.wien.domain.Document;
 import fhtw.wien.dto.DocumentResponse;
 import fhtw.wien.exception.ServiceException;
 import fhtw.wien.messaging.DocumentMessageProducer;
+import fhtw.wien.util.DocumentMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -37,7 +38,7 @@ public class DocumentService {
             log.info("Document created with ID: {}", created.getId());
             
             // Publish message after document is created
-            DocumentResponse response = toDocumentResponse(created);
+            DocumentResponse response = DocumentMapper.toResponse(created);
             messageProducer.publishDocumentCreated(response);
             
             return created;
@@ -54,7 +55,7 @@ public class DocumentService {
             log.info("Document updated with ID: {}", updated.getId());
             
             // Publish message after document is updated
-            DocumentResponse response = toDocumentResponse(updated);
+            DocumentResponse response = DocumentMapper.toResponse(updated);
             
             return updated;
         } catch (Exception e) {
@@ -99,24 +100,6 @@ public class DocumentService {
         }
     }
 
-    private DocumentResponse toDocumentResponse(Document d) {
-        return new DocumentResponse(
-                d.getId(),
-                d.getTitle(),
-                d.getOriginalFilename(),
-                d.getContentType(),
-                d.getSizeBytes(),
-                d.getBucket(),
-                d.getObjectKey(),
-                d.getStorageUri(),
-                d.getChecksumSha256(),
-                d.getStatus(),
-                d.getTags(),
-                d.getVersion(),
-                d.getCreatedAt(),
-                d.getUpdatedAt()
-        );
-    }
 
     public byte[] renderPdfPage(UUID id, int pageNumber, float scale) {
         log.info("Rendering page {} of document {} with scale {}", pageNumber, id, scale);

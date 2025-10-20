@@ -1,6 +1,6 @@
 package fhtw.wien.messaging;
 
-import fhtw.wien.config.RabbitMQConfig;
+import static fhtw.wien.config.MessagingConstants.*;
 import fhtw.wien.exception.MessagingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +19,7 @@ public class DocumentMessageConsumer {
         this.rabbitTemplate = rabbitTemplate;
     }
 
-    @RabbitListener(queues = RabbitMQConfig.DOCUMENT_DELETED_QUEUE)
+    @RabbitListener(queues = DOCUMENT_DELETED_QUEUE)
     public void handleDocumentDeleted(String documentId) {
         log.info("✅ CONSUMER RECEIVED: Document deleted - ID: {}", documentId);
 
@@ -31,8 +31,8 @@ public class DocumentMessageConsumer {
             );
 
             rabbitTemplate.convertAndSend(
-                    RabbitMQConfig.DOCUMENT_EXCHANGE,
-                    "document.deleted.ack",
+                    DOCUMENT_EXCHANGE,
+                    DOCUMENT_DELETED_ACK_ROUTING_KEY,
                     ackMessage
             );
 
