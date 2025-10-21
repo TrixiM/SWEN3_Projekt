@@ -1,44 +1,48 @@
 package fhtw.wien.ocrworker.domain;
 
 /**
- * @deprecated Use fhtw.wien.domain.DocumentStatus from the shared backend module instead.
- * This enum is kept for backward compatibility but should not be used in new code.
+ * Document processing status for OCR worker.
+ * This enum represents the various states a document can be in during OCR processing.
  */
-@Deprecated(since = "1.0", forRemoval = true)
 public enum DocumentStatus {
-    PENDING,
-    PROCESSING,
-    COMPLETED,
-    FAILED,
-    NEW;
+    /**
+     * Document is newly created and hasn't been processed yet
+     */
+    NEW,
     
     /**
-     * Converts this enum to the shared DocumentStatus from backend.
-     * @return corresponding backend DocumentStatus
+     * Document is waiting in the processing queue
      */
-    public fhtw.wien.domain.DocumentStatus toBackendStatus() {
-        return switch (this) {
-            case NEW -> fhtw.wien.domain.DocumentStatus.NEW;
-            case PENDING -> fhtw.wien.domain.DocumentStatus.OCR_PENDING;
-            case PROCESSING -> fhtw.wien.domain.DocumentStatus.OCR_IN_PROGRESS;
-            case COMPLETED -> fhtw.wien.domain.DocumentStatus.OCR_COMPLETED;
-            case FAILED -> fhtw.wien.domain.DocumentStatus.OCR_FAILED;
-        };
+    PENDING,
+    
+    /**
+     * Document is currently being processed
+     */
+    PROCESSING,
+    
+    /**
+     * Document processing completed successfully
+     */
+    COMPLETED,
+    
+    /**
+     * Document processing failed
+     */
+    FAILED;
+    
+    /**
+     * Checks if the status represents a completion state (successful or failed).
+     * @return true if the document processing is finished
+     */
+    public boolean isFinished() {
+        return this == COMPLETED || this == FAILED;
     }
     
     /**
-     * Creates this enum from the shared DocumentStatus from backend.
-     * @param backendStatus the backend status
-     * @return corresponding OCR worker status
+     * Checks if the status represents an active processing state.
+     * @return true if the document is currently being processed
      */
-    public static DocumentStatus fromBackendStatus(fhtw.wien.domain.DocumentStatus backendStatus) {
-        return switch (backendStatus) {
-            case NEW -> NEW;
-            case OCR_PENDING -> PENDING;
-            case OCR_IN_PROGRESS -> PROCESSING;
-            case OCR_COMPLETED -> COMPLETED;
-            case OCR_FAILED -> FAILED;
-            default -> NEW; // Default fallback
-        };
+    public boolean isActive() {
+        return this == PROCESSING || this == PENDING;
     }
 }

@@ -87,6 +87,7 @@ public class DocumentBusinessLogic {
         } catch (Exception e) {
             log.error("Failed to delete document with ID: {}", id, e);
             throw new DataAccessException("Failed to delete document", e);
+        }
     }
     
     /**
@@ -133,7 +134,5 @@ public class DocumentBusinessLogic {
      */
     private boolean isBlank(String str) {
         return str == null || str.trim().isEmpty();
-    }
-  }
     }
 }
