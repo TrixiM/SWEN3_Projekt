@@ -145,9 +145,7 @@ public interface DocumentRepository extends JpaRepository<Document, UUID> {
      * Gets basic document info without loading large binary data.
      * Useful for listings where PDF data is not needed.
      */
-    @Query("SELECT new fhtw.wien.domain.Document(d.id, d.title, d.originalFilename, d.contentType, " +
-           "d.sizeBytes, d.bucket, d.objectKey, d.storageUri, d.checksumSha256, d.status, " +
-           "d.version, d.createdAt, d.updatedAt) FROM Document d")
+    @Query("SELECT d FROM Document d")
     List<Document> findAllBasicInfo();
     
     /**

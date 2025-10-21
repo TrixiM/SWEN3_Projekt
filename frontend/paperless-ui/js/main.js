@@ -483,6 +483,14 @@ function nextPage() {
     renderPage(currentPage);
 }
 
+// Make functions globally available for inline onclick handlers
+window.editDocument = editDocument;
+window.deleteDocument = deleteDocument;
+window.openPdfPreview = openPdfPreview;
+window.closePdfModal = closePdfModal;
+window.previousPage = previousPage;
+window.nextPage = nextPage;
+
 // Close modal when clicking outside
 document.addEventListener('DOMContentLoaded', function() {
     const modal = document.getElementById('pdf-modal');
