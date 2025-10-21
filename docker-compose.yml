@@ -5,16 +5,21 @@ services:
       dockerfile: DOCKERFILE.REST
     container_name: rest-server
     restart: always
-#    environment:
- #     DATABASE_HOST: postgres
-  #    DATABASE_PORT: 5432
-   #   DATABASE_NAME: documentdb
-    #  DATABASE_USER: myuser
-     # DATABASE_PASSWORD: mypassword
+    environment:
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: documentdb
+      DATABASE_USER: myuser
+      DATABASE_PASSWORD: mypassword
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET_NAME: documents
     ports:
       - "8080:8080"
     depends_on:
       - postgres
+      - minio
     networks:
       - app-network
 
@@ -80,9 +85,35 @@ services:
     restart: always
     depends_on:
       - rabbitmq
+      - minio
     environment:
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_PORT: 5672
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET_NAME: documents
+    networks:
+      - app-network
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    restart: always
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
     networks:
       - app-network
 
@@ -94,3 +125,4 @@ networks:
 volumes:
   postgres_data:
   pgadmin_data:
+  minio_data:

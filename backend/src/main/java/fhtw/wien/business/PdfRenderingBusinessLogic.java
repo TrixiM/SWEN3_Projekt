@@ -23,21 +23,34 @@ public class PdfRenderingBusinessLogic {
     private static final Logger log = LoggerFactory.getLogger(PdfRenderingBusinessLogic.class);
     private static final int DEFAULT_DPI = 96;
     private static final String IMAGE_FORMAT = "PNG";
+    
+    private final DocumentBusinessLogic documentBusinessLogic;
+    
+    public PdfRenderingBusinessLogic(DocumentBusinessLogic documentBusinessLogic) {
+        this.documentBusinessLogic = documentBusinessLogic;
+    }
 
     public byte[] renderPdfPage(Document document, int pageNumber, float scale) {
         log.debug("Rendering page {} of document {} with scale {}", pageNumber, document.getId(), scale);
         
-        // Validate inputs using utility class
-        PdfValidator.validatePdfData(document);
+        // Validate inputs
+        if (document == null) {
+            throw new InvalidRequestException("Document cannot be null");
+        }
         PdfValidator.validateScale(scale);
 
-        try (PDDocument pdfDocument = Loader.loadPDF(document.getPdfData())) {
-            int totalPages = pdfDocument.getNumberOfPages();
-            log.debug("PDF loaded successfully. Total pages: {}", totalPages);
+        try {
+            // Get PDF content from MinIO
+            byte[] pdfData = documentBusinessLogic.getDocumentContent(document);
             
-            PdfValidator.validatePageNumber(document, pageNumber, totalPages);
+            try (PDDocument pdfDocument = Loader.loadPDF(pdfData)) {
+                int totalPages = pdfDocument.getNumberOfPages();
+                log.debug("PDF loaded successfully. Total pages: {}", totalPages);
+                
+                PdfValidator.validatePageNumber(document, pageNumber, totalPages);
 
-            return renderPageToImage(pdfDocument, pageNumber, scale, document.getId());
+                return renderPageToImage(pdfDocument, pageNumber, scale, document.getId());
+            }
             
         } catch (InvalidRequestException | NotFoundException e) {
             throw e; // Re-throw validation and not-found exceptions as-is
@@ -53,13 +66,20 @@ public class PdfRenderingBusinessLogic {
     public int getPdfPageCount(Document document) {
         log.debug("Getting page count for document: {}", document.getId());
         
-        // Validate PDF data using utility class
-        PdfValidator.validatePdfData(document);
+        // Validate document
+        if (document == null) {
+            throw new InvalidRequestException("Document cannot be null");
+        }
 
-        try (PDDocument pdfDocument = Loader.loadPDF(document.getPdfData())) {
-            int pageCount = pdfDocument.getNumberOfPages();
-            log.debug("Document {} has {} pages", document.getId(), pageCount);
-            return pageCount;
+        try {
+            // Get PDF content from MinIO
+            byte[] pdfData = documentBusinessLogic.getDocumentContent(document);
+            
+            try (PDDocument pdfDocument = Loader.loadPDF(pdfData)) {
+                int pageCount = pdfDocument.getNumberOfPages();
+                log.debug("Document {} has {} pages", document.getId(), pageCount);
+                return pageCount;
+            }
         } catch (IOException e) {
             log.error("IO error while reading PDF for document {}", document.getId(), e);
             throw new PdfProcessingException("Failed to read PDF", e);

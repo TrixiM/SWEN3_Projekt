@@ -122,20 +122,28 @@ public class DocumentController {
     @GetMapping("{id}/content")
     public ResponseEntity<byte[]> getContent(@PathVariable UUID id) {
         log.info("GET /v1/documents/{}/content - Retrieving document content", id);
-        // Controller only handles HTTP concerns: response headers
-        var doc = service.get(id);
-        if (doc.getPdfData() == null) {
-            log.warn("PDF data not found for document: {}", id);
-            return ResponseEntity.notFound().build();
+        
+        try {
+            var doc = service.get(id);
+            byte[] pdfData = service.getDocumentContent(doc);
+            
+            if (pdfData == null || pdfData.length == 0) {
+                log.warn("PDF data not found or empty for document: {}", id);
+                return ResponseEntity.notFound().build();
+            }
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            headers.setContentDispositionFormData("inline", doc.getOriginalFilename());
+            headers.setContentLength(pdfData.length);
+
+            log.debug("Returning PDF content for document: {}, size: {} bytes", id, pdfData.length);
+            return new ResponseEntity<>(pdfData, headers, HttpStatus.OK);
+            
+        } catch (Exception e) {
+            log.error("Failed to retrieve document content: {}", id, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.setContentDispositionFormData("inline", doc.getOriginalFilename());
-        headers.setContentLength(doc.getPdfData().length);
-
-        log.debug("Returning PDF content for document: {}, size: {} bytes", id, doc.getPdfData().length);
-        return new ResponseEntity<>(doc.getPdfData(), headers, HttpStatus.OK);
     }
 
     @GetMapping("{id}/pages/{pageNumber}")

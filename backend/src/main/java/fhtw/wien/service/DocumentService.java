@@ -126,4 +126,24 @@ public class DocumentService {
             throw e; // Re-throw to preserve original exception type
         }
     }
+    
+    /**
+     * Retrieves document content (PDF data) from storage.
+     *
+     * @param document the document entity
+     * @return the PDF content as byte array
+     * @throws ServiceException if content retrieval fails
+     */
+    public byte[] getDocumentContent(Document document) {
+        log.debug("Retrieving content for document {}", document.getId());
+        try {
+            byte[] content = documentBusinessLogic.getDocumentContent(document);
+            log.debug("Retrieved content for document {}, size: {} bytes", 
+                    document.getId(), content.length);
+            return content;
+        } catch (Exception e) {
+            log.error("Failed to retrieve content for document {}", document.getId(), e);
+            throw new ServiceException("Failed to retrieve document content", e);
+        }
+    }
 }
