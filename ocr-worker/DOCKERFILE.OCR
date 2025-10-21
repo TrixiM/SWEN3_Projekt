@@ -38,7 +38,7 @@ COPY --from=build /app/target/*.jar app.jar
 
 # Set OCR environment variables
 ENV TESSERACT_PATH=/usr/bin/tesseract
-ENV TESSDATA_PATH=/usr/share/tesseract-ocr/5/tessdata
+ENV TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
 
 # Expose port (not strictly necessary for a worker, but good practice)
 EXPOSE 8081
