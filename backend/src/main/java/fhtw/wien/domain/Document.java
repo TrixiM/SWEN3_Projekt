@@ -55,7 +55,7 @@ public class Document {
     @Column(nullable = false, length = 32)
     private DocumentStatus status = DocumentStatus.NEW;
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "document_tags", joinColumns = @JoinColumn(name = "document_id"))
     @Column(name = "tag")
     private List<String> tags = new ArrayList<>();

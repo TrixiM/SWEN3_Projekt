@@ -2,11 +2,15 @@ package fhtw.wien.ocrworker.messaging;
 
 import fhtw.wien.ocrworker.config.RabbitMQConfig;
 import fhtw.wien.ocrworker.dto.DocumentResponse;
+import fhtw.wien.ocrworker.dto.OcrAcknowledgment;
+import fhtw.wien.ocrworker.service.OcrProcessingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
+
+import java.time.Instant;
 
 @Component
 public class OcrMessageConsumer {
@@ -14,9 +18,11 @@ public class OcrMessageConsumer {
     private static final Logger log = LoggerFactory.getLogger(OcrMessageConsumer.class);
 
     private final RabbitTemplate rabbitTemplate;
+    private final OcrProcessingService ocrProcessingService;
 
-    public OcrMessageConsumer(RabbitTemplate rabbitTemplate) {
+    public OcrMessageConsumer(RabbitTemplate rabbitTemplate, OcrProcessingService ocrProcessingService) {
         this.rabbitTemplate = rabbitTemplate;
+        this.ocrProcessingService = ocrProcessingService;
     }
 
     @RabbitListener(queues = RabbitMQConfig.DOCUMENT_CREATED_QUEUE)
@@ -30,41 +36,43 @@ public class OcrMessageConsumer {
         log.info("   - Size: {} bytes", document.sizeBytes());
         log.info("   - Status: {}", document.status());
         
-        // This is an "empty" OCR worker - it just processes/logs the message
-        // In a real implementation, this would:
-        // 1. Download the PDF from storage
-        // 2. Run OCR on it (e.g., using Tesseract)
-        // 3. Extract text
-        // 4. Update the document status
-        // 5. Store the extracted text
+        // Process document using the improved async service
+        log.info("🔄 Delegating OCR processing to service...");
         
-        log.info("🔄 Simulating OCR processing...");
-        
+        ocrProcessingService.processDocument(document)
+                .whenComplete((acknowledgment, throwable) -> {
+                    if (throwable != null) {
+                        log.error("❌ OCR processing failed for document: {}", document.id(), throwable);
+                        // Send failure acknowledgment
+                        OcrAcknowledgment failureAck = new OcrAcknowledgment(
+                                document.id(),
+                                document.title(),
+                                "FAILED",
+                                "Processing failed: " + throwable.getMessage(),
+                                Instant.now()
+                        );
+                        sendAcknowledgment(failureAck);
+                    } else {
+                        log.info("✅ OCR processing completed for document: {} with status: {}", 
+                                document.id(), acknowledgment.status());
+                        sendAcknowledgment(acknowledgment);
+                    }
+                });
+    }
+    
+    /**
+     * Helper method to send acknowledgment messages.
+     */
+    private void sendAcknowledgment(OcrAcknowledgment acknowledgment) {
         try {
-            // Simulate some processing time
-            Thread.sleep(1000);
-            
-            log.info("✅ OCR processing completed successfully for document: {}", document.id());
-            
-            // Send acknowledgment message back
-            String ackMessage = String.format(
-                    "✅ OCR Worker: Document '%s' (ID: %s) processed successfully",
-                    document.title(), document.id()
-            );
-            
             rabbitTemplate.convertAndSend(
                     RabbitMQConfig.DOCUMENT_EXCHANGE,
                     "document.created.ack",
-                    ackMessage
+                    acknowledgment
             );
-            
-            log.info("📤 Sent acknowledgment to queue");
-            
-        } catch (InterruptedException e) {
-            log.error("❌ OCR processing interrupted for document: {}", document.id(), e);
-            Thread.currentThread().interrupt();
+            log.info("📤 Sent acknowledgment to queue for document: {}", acknowledgment.documentId());
         } catch (Exception e) {
-            log.error("❌ Error processing document: {}", document.id(), e);
+            log.error("❌ Failed to send acknowledgment for document: {}", acknowledgment.documentId(), e);
         }
     }
 }
