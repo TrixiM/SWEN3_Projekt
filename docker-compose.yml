@@ -96,6 +96,23 @@ services:
     networks:
       - app-network
 
+  genai-worker:
+    build:
+      context: ./genai-worker
+      dockerfile: Dockerfile
+    container_name: genai-worker
+    restart: always
+    depends_on:
+      - rabbitmq
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: guest
+      RABBITMQ_PASSWORD: guest
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+    networks:
+      - app-network
+
   minio:
     image: minio/minio:latest
     container_name: minio

@@ -31,10 +31,10 @@ public class OcrProcessingService {
      * Downloads document from MinIO, performs OCR extraction, and returns results.
      * 
      * @param document the document to process
-     * @return a CompletableFuture containing the processing result
+     * @return a CompletableFuture containing the OCR result
      */
     @Async
-    public CompletableFuture<OcrAcknowledgment> processDocument(DocumentResponse document) {
+    public CompletableFuture<OcrResultDto> processDocument(DocumentResponse document) {
         log.info("🔄 Starting real OCR processing for document: {} ('{}'')", 
                 document.id(), document.title());
         
@@ -43,18 +43,17 @@ public class OcrProcessingService {
                 // Perform actual OCR processing
                 OcrResultDto ocrResult = unifiedOcrService.processDocument(document);
                 
-                // Convert OCR result to acknowledgment
                 if (ocrResult.isSuccess()) {
                     log.info("✅ OCR processing completed successfully for document: {}", document.id());
-                    return createSuccessAcknowledgment(document, ocrResult);
                 } else {
                     log.warn("⚠️ OCR processing failed for document: {} - {}", document.id(), ocrResult.errorMessage());
-                    return createFailureAcknowledgment(document, ocrResult.errorMessage());
                 }
+                
+                return ocrResult;
                 
             } catch (Exception e) {
                 log.error("❌ Unexpected error during OCR processing for document: {}", document.id(), e);
-                return createFailureAcknowledgment(document, "Unexpected error: " + e.getMessage());
+                return OcrResultDto.failure(document.id(), document.title(), "Unexpected error: " + e.getMessage(), 0L);
             }
         }).whenComplete((result, throwable) -> {
             if (throwable != null) {
@@ -66,32 +65,4 @@ public class OcrProcessingService {
         });
     }
     
-    /**
-     * Creates a success acknowledgment from OCR result.
-     */
-    private OcrAcknowledgment createSuccessAcknowledgment(DocumentResponse document, OcrResultDto ocrResult) {
-        String message = String.format("OCR completed: %d characters extracted from %d pages (confidence: %d%%, time: %dms)",
-                ocrResult.totalCharacters(), ocrResult.totalPages(), ocrResult.overallConfidence(), ocrResult.processingTimeMs());
-        
-        return new OcrAcknowledgment(
-                document.id(),
-                document.title(),
-                "SUCCESS",
-                message,
-                Instant.now()
-        );
-    }
-    
-    /**
-     * Creates a failure acknowledgment.
-     */
-    private OcrAcknowledgment createFailureAcknowledgment(DocumentResponse document, String message) {
-        return new OcrAcknowledgment(
-                document.id(),
-                document.title(),
-                "FAILED",
-                message,
-                Instant.now()
-        );
-    }
 }

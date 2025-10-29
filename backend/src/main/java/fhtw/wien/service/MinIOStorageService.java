@@ -28,7 +28,7 @@ public class MinIOStorageService {
     private final String bucketName;
     
     public MinIOStorageService(
-            @Value("${minio.endpoint:http://localhost:9000}") String endpoint,
+            @Value("${minio.endpoint:http://minio:9000}") String endpoint,
             @Value("${minio.access-key:minioadmin}") String accessKey,
             @Value("${minio.secret-key:minioadmin}") String secretKey,
             @Value("${minio.bucket-name:documents}") String bucketName) {

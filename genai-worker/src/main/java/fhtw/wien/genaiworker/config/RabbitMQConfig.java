@@ -1,4 +1,4 @@
-package fhtw.wien.ocrworker.config;
+package fhtw.wien.genaiworker.config;
 
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
@@ -8,14 +8,23 @@ import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * RabbitMQ configuration for GenAI Worker.
+ * Defines queues, exchanges, and bindings for OCR completion and summary result messages.
+ */
 @Configuration
 public class RabbitMQConfig {
 
+    // Exchange
     public static final String DOCUMENT_EXCHANGE = "document.exchange";
-    public static final String DOCUMENT_CREATED_QUEUE = "document.created.queue";
-    public static final String DOCUMENT_CREATED_ACK_QUEUE = "document.created.ack.queue";
-    public static final String DOCUMENT_CREATED_ROUTING_KEY = "document.created";
+    
+    // Queues
+    public static final String OCR_COMPLETED_QUEUE = "ocr.completed.queue";
+    public static final String SUMMARY_RESULT_QUEUE = "summary.result.queue";
+    
+    // Routing Keys
     public static final String OCR_COMPLETED_ROUTING_KEY = "ocr.completed";
+    public static final String SUMMARY_RESULT_ROUTING_KEY = "summary.result";
 
     @Bean
     public DirectExchange documentExchange() {
@@ -23,27 +32,27 @@ public class RabbitMQConfig {
     }
 
     @Bean
-    public Queue documentCreatedQueue() {
-        return new Queue(DOCUMENT_CREATED_QUEUE, true);
+    public Queue ocrCompletedQueue() {
+        return new Queue(OCR_COMPLETED_QUEUE, true);
     }
 
     @Bean
-    public Queue documentCreatedAckQueue() {
-        return new Queue(DOCUMENT_CREATED_ACK_QUEUE, true);
+    public Queue summaryResultQueue() {
+        return new Queue(SUMMARY_RESULT_QUEUE, true);
     }
 
     @Bean
-    public Binding documentCreatedBinding(Queue documentCreatedQueue, DirectExchange documentExchange) {
-        return BindingBuilder.bind(documentCreatedQueue)
+    public Binding ocrCompletedBinding(Queue ocrCompletedQueue, DirectExchange documentExchange) {
+        return BindingBuilder.bind(ocrCompletedQueue)
                 .to(documentExchange)
-                .with(DOCUMENT_CREATED_ROUTING_KEY);
+                .with(OCR_COMPLETED_ROUTING_KEY);
     }
 
     @Bean
-    public Binding documentCreatedAckBinding(Queue documentCreatedAckQueue, DirectExchange documentExchange) {
-        return BindingBuilder.bind(documentCreatedAckQueue)
+    public Binding summaryResultBinding(Queue summaryResultQueue, DirectExchange documentExchange) {
+        return BindingBuilder.bind(summaryResultQueue)
                 .to(documentExchange)
-                .with("document.created.ack");
+                .with(SUMMARY_RESULT_ROUTING_KEY);
     }
 
     @Bean

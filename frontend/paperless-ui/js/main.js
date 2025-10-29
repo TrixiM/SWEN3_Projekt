@@ -46,8 +46,9 @@ function initializeDOM() {
 }
 
 function setupEventListeners() {
-    const debouncedFilter = debounce(filterDocuments, FILTER_DEBOUNCE_DELAY);
-    
+    const debouncedFilter = debounce(filterDocuments, FILTER_DEBOUNCE_DELAY); //Creates a version of filterDocuments that only runs after the user stops triggering it for a set delay.
+
+
     // File upload on file input change
     if (fileInput) {
         fileInput.addEventListener('change', handleFileUpload);

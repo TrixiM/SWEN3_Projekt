@@ -60,6 +60,9 @@ public class Document {
     @Column(name = "tag")
     private List<String> tags = new ArrayList<>();
 
+    @Column(name = "summary", columnDefinition = "text")
+    private String summary;
+
     @Version
     @Column(nullable = false)
     private int version;

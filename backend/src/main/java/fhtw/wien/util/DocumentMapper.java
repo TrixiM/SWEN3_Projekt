@@ -36,6 +36,7 @@ public final class DocumentMapper {
                 document.getChecksumSha256(),
                 document.getStatus(),
                 document.getTags(),
+                document.getSummary(),
                 document.getVersion(),
                 document.getCreatedAt(),
                 document.getUpdatedAt()

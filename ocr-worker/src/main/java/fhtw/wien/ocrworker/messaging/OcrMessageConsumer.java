@@ -3,6 +3,7 @@ package fhtw.wien.ocrworker.messaging;
 import fhtw.wien.ocrworker.config.RabbitMQConfig;
 import fhtw.wien.ocrworker.dto.DocumentResponse;
 import fhtw.wien.ocrworker.dto.OcrAcknowledgment;
+import fhtw.wien.ocrworker.dto.OcrResultDto;
 import fhtw.wien.ocrworker.service.OcrProcessingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,7 +41,7 @@ public class OcrMessageConsumer {
         log.info("🔄 Delegating OCR processing to service...");
         
         ocrProcessingService.processDocument(document)
-                .whenComplete((acknowledgment, throwable) -> {
+                .whenComplete((ocrResult, throwable) -> {
                     if (throwable != null) {
                         log.error("❌ OCR processing failed for document: {}", document.id(), throwable);
                         // Send failure acknowledgment
@@ -54,10 +55,39 @@ public class OcrMessageConsumer {
                         sendAcknowledgment(failureAck);
                     } else {
                         log.info("✅ OCR processing completed for document: {} with status: {}", 
-                                document.id(), acknowledgment.status());
-                        sendAcknowledgment(acknowledgment);
+                                document.id(), ocrResult.status());
+                        
+                        // Send OCR result to GenAI worker for summarization
+                        sendOcrCompletionMessage(ocrResult);
+                        
+                        // Send acknowledgment (for backward compatibility)
+                        OcrAcknowledgment ack = new OcrAcknowledgment(
+                                document.id(),
+                                document.title(),
+                                ocrResult.status(),
+                                ocrResult.getSummary(),
+                                Instant.now()
+                        );
+                        sendAcknowledgment(ack);
                     }
                 });
+    }
+    
+    /**
+     * Sends OCR completion message to GenAI worker for summarization.
+     */
+    private void sendOcrCompletionMessage(OcrResultDto ocrResult) {
+        try {
+            rabbitTemplate.convertAndSend(
+                    RabbitMQConfig.DOCUMENT_EXCHANGE,
+                    RabbitMQConfig.OCR_COMPLETED_ROUTING_KEY,
+                    ocrResult
+            );
+            log.info("📤 Sent OCR completion message to GenAI worker for document: {} ({} characters)",
+                    ocrResult.documentId(), ocrResult.totalCharacters());
+        } catch (Exception e) {
+            log.error("❌ Failed to send OCR completion message for document: {}", ocrResult.documentId(), e);
+        }
     }
     
     /**
