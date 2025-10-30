@@ -2,13 +2,11 @@ package fhtw.wien.controller;
 
 import fhtw.wien.config.StorageConfiguration;
 import fhtw.wien.domain.Document;
-import fhtw.wien.dto.CreateDocumentDTO;
 import fhtw.wien.dto.DocumentResponse;
 import fhtw.wien.exception.InvalidRequestException;
 import fhtw.wien.service.DocumentService;
 import fhtw.wien.util.DocumentMapper;
 import fhtw.wien.util.DocumentUpdateMapper;
-import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
