@@ -4,6 +4,7 @@ import fhtw.wien.ocrworker.config.RabbitMQConfig;
 import fhtw.wien.ocrworker.dto.DocumentResponse;
 import fhtw.wien.ocrworker.dto.OcrAcknowledgment;
 import fhtw.wien.ocrworker.dto.OcrResultDto;
+import fhtw.wien.ocrworker.elasticsearch.ElasticsearchService;
 import fhtw.wien.ocrworker.service.IdempotencyService;
 import fhtw.wien.ocrworker.service.OcrProcessingService;
 import org.slf4j.Logger;
@@ -22,12 +23,14 @@ public class OcrMessageConsumer {
     private final RabbitTemplate rabbitTemplate;
     private final OcrProcessingService ocrProcessingService;
     private final IdempotencyService idempotencyService;
+    private final ElasticsearchService elasticsearchService;
 
     public OcrMessageConsumer(RabbitTemplate rabbitTemplate, OcrProcessingService ocrProcessingService,
-                              IdempotencyService idempotencyService) {
+                              IdempotencyService idempotencyService, ElasticsearchService elasticsearchService) {
         this.rabbitTemplate = rabbitTemplate;
         this.ocrProcessingService = ocrProcessingService;
         this.idempotencyService = idempotencyService;
+        this.elasticsearchService = elasticsearchService;
     }
 
     @RabbitListener(queues = RabbitMQConfig.DOCUMENT_CREATED_QUEUE)
@@ -67,6 +70,17 @@ public class OcrMessageConsumer {
                     } else {
                         log.info("✅ OCR processing completed for document: {} with status: {}", 
                                 document.id(), ocrResult.status());
+                        
+                        // Index document in Elasticsearch if OCR was successful
+                        if (ocrResult.isSuccess() && ocrResult.extractedText() != null && !ocrResult.extractedText().isEmpty()) {
+                            try {
+                                elasticsearchService.indexDocument(ocrResult);
+                                log.info("📇 Document {} successfully indexed in Elasticsearch", document.id());
+                            } catch (Exception e) {
+                                log.error("❌ Failed to index document {} in Elasticsearch: {}", 
+                                        document.id(), e.getMessage(), e);
+                            }
+                        }
                         
                         // Send OCR result to GenAI worker for summarization
                         sendOcrCompletionMessage(ocrResult);
