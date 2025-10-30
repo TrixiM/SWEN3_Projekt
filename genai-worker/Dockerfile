@@ -10,7 +10,7 @@ RUN mvn dependency:go-offline -B
 COPY src ./src
 RUN mvn clean package -DskipTests
 
-# Runtime stage
+# Runtime stage for eclipse
 FROM eclipse-temurin:21-jre
 
 WORKDIR /app
