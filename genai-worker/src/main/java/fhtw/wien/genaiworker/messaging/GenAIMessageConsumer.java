@@ -3,6 +3,7 @@ package fhtw.wien.genaiworker.messaging;
 import fhtw.wien.genaiworker.config.RabbitMQConfig;
 import fhtw.wien.genaiworker.dto.OcrResultDto;
 import fhtw.wien.genaiworker.dto.SummaryResultMessage;
+import fhtw.wien.genaiworker.service.IdempotencyService;
 import fhtw.wien.genaiworker.service.SummarizationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,11 +22,14 @@ public class GenAIMessageConsumer {
 
     private final SummarizationService summarizationService;
     private final RabbitTemplate rabbitTemplate;
+    private final IdempotencyService idempotencyService;
 
     public GenAIMessageConsumer(SummarizationService summarizationService, 
-                                RabbitTemplate rabbitTemplate) {
+                                RabbitTemplate rabbitTemplate,
+                                IdempotencyService idempotencyService) {
         this.summarizationService = summarizationService;
         this.rabbitTemplate = rabbitTemplate;
+        this.idempotencyService = idempotencyService;
     }
 
     /**
@@ -37,6 +41,13 @@ public class GenAIMessageConsumer {
     public void handleOcrCompleted(OcrResultDto message) {
         log.info("📨 GENAI WORKER RECEIVED: OCR completed for document: {} ('{}')",
                 message.documentId(), message.documentTitle());
+        
+        // Idempotency check
+        String messageId = "genai-ocr-" + message.documentId();
+        if (!idempotencyService.tryMarkAsProcessed(messageId)) {
+            log.info("⏭️ Skipping duplicate OCR completion for document: {}", message.documentId());
+            return;
+        }
 
         log.info("📋 OCR Details:");
         log.info("   - Pages: {}", message.totalPages());

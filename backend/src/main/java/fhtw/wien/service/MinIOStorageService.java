@@ -1,7 +1,10 @@
 package fhtw.wien.service;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import io.minio.*;
 import io.minio.errors.*;
+import okhttp3.OkHttpClient;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +17,7 @@ import java.io.InputStream;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Service for handling MinIO object storage operations for PDF documents.
@@ -34,9 +38,18 @@ public class MinIOStorageService {
             @Value("${minio.bucket-name:documents}") String bucketName) {
         
         this.bucketName = bucketName;
+        
+        // Configure OkHttpClient with connection pooling and timeouts
+        OkHttpClient httpClient = new OkHttpClient.Builder()
+                .connectTimeout(10, TimeUnit.SECONDS)
+                .writeTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(30, TimeUnit.SECONDS)
+                .build();
+        
         this.minioClient = MinioClient.builder()
                 .endpoint(endpoint)
                 .credentials(accessKey, secretKey)
+                .httpClient(httpClient)
                 .build();
         
         try {
@@ -49,6 +62,7 @@ public class MinIOStorageService {
     
     /**
      * Uploads a PDF document to MinIO storage.
+     * Protected by circuit breaker and retry logic.
      *
      * @param documentId the unique document ID
      * @param filename the original filename
@@ -57,6 +71,8 @@ public class MinIOStorageService {
      * @return the object key for the uploaded document
      * @throws RuntimeException if upload fails
      */
+    @CircuitBreaker(name = "minioService")
+    @Retry(name = "minioService")
     public String uploadDocument(UUID documentId, String filename, String contentType, byte[] data) {
         String objectKey = generateObjectKey(documentId, filename);
         
@@ -87,11 +103,14 @@ public class MinIOStorageService {
     
     /**
      * Downloads a PDF document from MinIO storage.
+     * Protected by circuit breaker and retry logic.
      *
      * @param objectKey the object key for the document
      * @return the document data as byte array
      * @throws RuntimeException if download fails
      */
+    @CircuitBreaker(name = "minioService")
+    @Retry(name = "minioService")
     public byte[] downloadDocument(String objectKey) {
         try {
             log.info("Downloading document from MinIO: bucket={}, key={}", bucketName, objectKey);
@@ -118,10 +137,13 @@ public class MinIOStorageService {
     
     /**
      * Checks if a document exists in MinIO storage.
+     * Protected by circuit breaker and retry logic.
      *
      * @param objectKey the object key for the document
      * @return true if the document exists, false otherwise
      */
+    @CircuitBreaker(name = "minioService")
+    @Retry(name = "minioService")
     public boolean documentExists(String objectKey) {
         try {
             StatObjectArgs statObjectArgs = StatObjectArgs.builder()
@@ -147,10 +169,13 @@ public class MinIOStorageService {
     
     /**
      * Deletes a document from MinIO storage.
+     * Protected by circuit breaker and retry logic.
      *
      * @param objectKey the object key for the document
      * @throws RuntimeException if deletion fails
      */
+    @CircuitBreaker(name = "minioService")
+    @Retry(name = "minioService")
     public void deleteDocument(String objectKey) {
         try {
             log.info("Deleting document from MinIO: bucket={}, key={}", bucketName, objectKey);

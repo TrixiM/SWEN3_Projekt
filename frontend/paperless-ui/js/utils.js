@@ -123,39 +123,108 @@ export function formatDate(dateString) {
 }
 
 /**
- * Makes an API request with proper error handling.
+ * Makes an API request with proper error handling and retry logic with exponential backoff.
  * 
  * @param {string} url - The API endpoint URL
  * @param {object} options - Fetch options
+ * @param {number} maxRetries - Maximum number of retry attempts (default: 3)
  * @returns {Promise} Promise that resolves to response data or rejects with error
  */
-export async function apiRequest(url, options = {}) {
+export async function apiRequest(url, options = {}, maxRetries = 3) {
     const fullUrl = API_CONFIG.BASE_URL + url;
     
-    try {
-        const response = await fetch(fullUrl, {
-            ...options,
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+            const response = await fetch(fullUrl, {
+                ...options,
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                }
+            });
+
+            if (!response.ok) {
+                // Don't retry on 4xx errors (client errors)
+                if (response.status >= 400 && response.status < 500) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                // Retry on 5xx errors (server errors)
+                if (attempt < maxRetries) {
+                    const delay = calculateBackoffDelay(attempt);
+                    console.warn(`API request failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delay}ms...`);
+                    await sleep(delay);
+                    continue;
+                }
+                
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
-        });
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            // Handle different response types
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                return await response.json();
+            } else {
+                return response;
+            }
+        } catch (error) {
+            // Network errors or fetch failures
+            if (attempt < maxRetries && isRetryableError(error)) {
+                const delay = calculateBackoffDelay(attempt);
+                console.warn(`API request failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delay}ms...`, error);
+                await sleep(delay);
+                continue;
+            }
+            
+            console.error('API request failed:', error);
+            throw error;
         }
-
-        // Handle different response types
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-            return await response.json();
-        } else {
-            return response;
-        }
-    } catch (error) {
-        console.error('API request failed:', error);
-        throw error;
     }
+}
+
+/**
+ * Calculates exponential backoff delay.
+ * 
+ * @param {number} attempt - Current attempt number (0-indexed)
+ * @returns {number} Delay in milliseconds
+ */
+function calculateBackoffDelay(attempt) {
+    const baseDelay = 1000; // 1 second
+    const maxDelay = 10000; // 10 seconds
+    const exponentialDelay = baseDelay * Math.pow(2, attempt);
+    const jitter = Math.random() * 500; // Add up to 500ms jitter
+    return Math.min(exponentialDelay + jitter, maxDelay);
+}
+
+/**
+ * Checks if an error is retryable.
+ * 
+ * @param {Error} error - The error to check
+ * @returns {boolean} True if retryable
+ */
+function isRetryableError(error) {
+    // Retry on network errors, timeouts, and connection issues
+    const retryableErrors = [
+        'NetworkError',
+        'TypeError', // Often caused by network failures
+        'Failed to fetch',
+        'Network request failed',
+        'Load failed'
+    ];
+    
+    return retryableErrors.some(msg => 
+        error.message.includes(msg) || error.name === msg
+    );
+}
+
+/**
+ * Sleep utility for delay.
+ * 
+ * @param {number} ms - Milliseconds to sleep
+ * @returns {Promise} Promise that resolves after delay
+ */
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 /**

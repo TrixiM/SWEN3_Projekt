@@ -4,6 +4,7 @@ import fhtw.wien.ocrworker.config.RabbitMQConfig;
 import fhtw.wien.ocrworker.dto.DocumentResponse;
 import fhtw.wien.ocrworker.dto.OcrAcknowledgment;
 import fhtw.wien.ocrworker.dto.OcrResultDto;
+import fhtw.wien.ocrworker.service.IdempotencyService;
 import fhtw.wien.ocrworker.service.OcrProcessingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,16 +21,26 @@ public class OcrMessageConsumer {
 
     private final RabbitTemplate rabbitTemplate;
     private final OcrProcessingService ocrProcessingService;
+    private final IdempotencyService idempotencyService;
 
-    public OcrMessageConsumer(RabbitTemplate rabbitTemplate, OcrProcessingService ocrProcessingService) {
+    public OcrMessageConsumer(RabbitTemplate rabbitTemplate, OcrProcessingService ocrProcessingService,
+                              IdempotencyService idempotencyService) {
         this.rabbitTemplate = rabbitTemplate;
         this.ocrProcessingService = ocrProcessingService;
+        this.idempotencyService = idempotencyService;
     }
 
     @RabbitListener(queues = RabbitMQConfig.DOCUMENT_CREATED_QUEUE)
     public void handleDocumentCreated(DocumentResponse document) {
         log.info("📄 OCR WORKER RECEIVED: Document created - ID: {}, Title: '{}'",
                 document.id(), document.title());
+        
+        // Idempotency check
+        String messageId = "ocr-doc-" + document.id();
+        if (!idempotencyService.tryMarkAsProcessed(messageId)) {
+            log.info("⏭️ Skipping duplicate document processing: {}", document.id());
+            return;
+        }
         
         log.info("📋 Document Details:");
         log.info("   - Filename: {}", document.originalFilename());

@@ -1,12 +1,16 @@
 package fhtw.wien.genaiworker.config;
 
 import org.springframework.amqp.core.*;
+import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * RabbitMQ configuration for GenAI Worker.
@@ -28,17 +32,32 @@ public class RabbitMQConfig {
 
     @Bean
     public DirectExchange documentExchange() {
-        return new DirectExchange(DOCUMENT_EXCHANGE);
+        return new DirectExchange(DOCUMENT_EXCHANGE, true, false);
+    }
+    
+    @Bean
+    public DirectExchange deadLetterExchange() {
+        return new DirectExchange(DOCUMENT_EXCHANGE + ".dlx", true, false);
     }
 
     @Bean
     public Queue ocrCompletedQueue() {
-        return new Queue(OCR_COMPLETED_QUEUE, true);
+        return createQueueWithDLQ(OCR_COMPLETED_QUEUE);
     }
 
     @Bean
     public Queue summaryResultQueue() {
-        return new Queue(SUMMARY_RESULT_QUEUE, true);
+        return createQueueWithDLQ(SUMMARY_RESULT_QUEUE);
+    }
+    
+    @Bean
+    public Queue ocrCompletedDLQ() {
+        return new Queue(OCR_COMPLETED_QUEUE + ".dlq", true);
+    }
+    
+    @Bean
+    public Queue summaryResultDLQ() {
+        return new Queue(SUMMARY_RESULT_QUEUE + ".dlq", true);
     }
 
     @Bean
@@ -64,6 +83,41 @@ public class RabbitMQConfig {
     public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
         RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
         rabbitTemplate.setMessageConverter(jsonMessageConverter());
+        rabbitTemplate.setMandatory(true);
         return rabbitTemplate;
+    }
+    
+    @Bean
+    public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
+            ConnectionFactory connectionFactory) {
+        SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
+        factory.setConnectionFactory(connectionFactory);
+        factory.setMessageConverter(jsonMessageConverter());
+        factory.setAcknowledgeMode(AcknowledgeMode.AUTO);
+        factory.setPrefetchCount(5);
+        factory.setDefaultRequeueRejected(false);
+        return factory;
+    }
+    
+    private Queue createQueueWithDLQ(String queueName) {
+        Map<String, Object> args = new HashMap<>();
+        args.put("x-dead-letter-exchange", DOCUMENT_EXCHANGE + ".dlx");
+        args.put("x-dead-letter-routing-key", queueName + ".dlq");
+        // Note: x-message-ttl removed to avoid conflicts with existing queues
+        return new Queue(queueName, true, false, false, args);
+    }
+    
+    @Bean
+    public Binding ocrCompletedDLQBinding(Queue ocrCompletedDLQ, DirectExchange deadLetterExchange) {
+        return BindingBuilder.bind(ocrCompletedDLQ)
+                .to(deadLetterExchange)
+                .with(OCR_COMPLETED_QUEUE + ".dlq");
+    }
+    
+    @Bean
+    public Binding summaryResultDLQBinding(Queue summaryResultDLQ, DirectExchange deadLetterExchange) {
+        return BindingBuilder.bind(summaryResultDLQ)
+                .to(deadLetterExchange)
+                .with(SUMMARY_RESULT_QUEUE + ".dlq");
     }
 }

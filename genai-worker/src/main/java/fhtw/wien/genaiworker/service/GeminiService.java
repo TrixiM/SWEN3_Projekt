@@ -2,14 +2,19 @@ package fhtw.wien.genaiworker.service;
 
 import fhtw.wien.genaiworker.config.GenAIConfig;
 import fhtw.wien.genaiworker.exception.GenAIException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import io.github.resilience4j.retry.annotation.Retry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
@@ -31,18 +36,26 @@ public class GeminiService {
     private final GenAIConfig config;
     private final RestTemplate restTemplate;
 
-    public GeminiService(GenAIConfig config) {
+    public GeminiService(GenAIConfig config, RestTemplateBuilder restTemplateBuilder) {
         this.config = config;
-        this.restTemplate = new RestTemplate();
+        // Configure RestTemplate with proper timeouts
+        this.restTemplate = restTemplateBuilder
+                .setConnectTimeout(Duration.ofSeconds(10))
+                .setReadTimeout(Duration.ofSeconds(30))
+                .build();
     }
 
     /**
      * Generates a summary for the given text using Google Gemini API.
+     * Protected by circuit breaker, retry logic, and rate limiter.
      *
      * @param text the text to summarize
      * @return the generated summary
      * @throws GenAIException if summarization fails
      */
+    @CircuitBreaker(name = "geminiService", fallbackMethod = "generateSummaryFallback")
+    @Retry(name = "geminiService")
+    @RateLimiter(name = "geminiService")
     public String generateSummary(String text) {
         log.info("🤖 Generating summary using Google Gemini API...");
         long startTime = System.currentTimeMillis();
@@ -186,6 +199,15 @@ public class GeminiService {
             // No good break point, just truncate
             return truncated + "...";
         }
+    }
+
+    /**
+     * Fallback method for generateSummary when circuit is open or retries exhausted.
+     */
+    private String generateSummaryFallback(String text, Exception ex) {
+        log.warn("⚠️ Gemini API unavailable, using fallback. Reason: {}", ex.getMessage());
+        return "[Summary temporarily unavailable - Gemini API service is experiencing issues. " +
+               "This document contains " + text.length() + " characters and will be summarized once the service recovers.]";
     }
 
     /**

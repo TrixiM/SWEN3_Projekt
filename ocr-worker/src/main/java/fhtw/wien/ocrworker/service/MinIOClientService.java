@@ -1,7 +1,10 @@
 package fhtw.wien.ocrworker.service;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import io.minio.*;
 import io.minio.errors.*;
+import okhttp3.OkHttpClient;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,6 +15,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * MinIO client service for the OCR worker to download documents from storage.
@@ -32,9 +36,18 @@ public class MinIOClientService {
             @Value("${minio.bucket-name:documents}") String bucketName) {
         
         this.bucketName = bucketName;
+        
+        // Configure OkHttpClient with connection pooling and timeouts
+        OkHttpClient httpClient = new OkHttpClient.Builder()
+                .connectTimeout(10, TimeUnit.SECONDS)
+                .writeTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(30, TimeUnit.SECONDS)
+                .build();
+        
         this.minioClient = MinioClient.builder()
                 .endpoint(endpoint)
                 .credentials(accessKey, secretKey)
+                .httpClient(httpClient)
                 .build();
         
         log.info("MinIO client initialized for OCR worker: endpoint={}, bucket={}", endpoint, bucketName);
@@ -49,11 +62,14 @@ public class MinIOClientService {
     
     /**
      * Downloads a document from MinIO storage.
+     * Protected by circuit breaker and retry logic.
      *
      * @param objectKey the object key for the document
      * @return the document data as byte array
      * @throws RuntimeException if download fails
      */
+    @CircuitBreaker(name = "minioService")
+    @Retry(name = "minioService")
     public byte[] downloadDocument(String objectKey) {
         if (objectKey == null || objectKey.trim().isEmpty()) {
             throw new IllegalArgumentException("Object key cannot be null or empty");

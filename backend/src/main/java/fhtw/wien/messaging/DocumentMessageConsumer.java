@@ -5,6 +5,7 @@ import fhtw.wien.domain.Document;
 import fhtw.wien.dto.SummaryResultDto;
 import fhtw.wien.exception.MessagingException;
 import fhtw.wien.repo.DocumentRepo;
+import fhtw.wien.service.IdempotencyService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -19,10 +20,13 @@ public class DocumentMessageConsumer {
 
     private final RabbitTemplate rabbitTemplate;
     private final DocumentRepo documentRepo;
+    private final IdempotencyService idempotencyService;
 
-    public DocumentMessageConsumer(RabbitTemplate rabbitTemplate, DocumentRepo documentRepo) {
+    public DocumentMessageConsumer(RabbitTemplate rabbitTemplate, DocumentRepo documentRepo, 
+                                    IdempotencyService idempotencyService) {
         this.rabbitTemplate = rabbitTemplate;
         this.documentRepo = documentRepo;
+        this.idempotencyService = idempotencyService;
     }
 
     @RabbitListener(queues = DOCUMENT_DELETED_QUEUE)
@@ -59,6 +63,13 @@ public class DocumentMessageConsumer {
     @Transactional
     public void handleSummaryResult(SummaryResultDto summaryResult) {
         log.info("📨 BACKEND RECEIVED: Summary result for document ID: {}", summaryResult.documentId());
+        
+        // Idempotency check - use documentId as unique message identifier
+        String messageId = "summary-" + summaryResult.documentId();
+        if (!idempotencyService.tryMarkAsProcessed(messageId)) {
+            log.info("⏭️ Skipping duplicate summary result for document: {}", summaryResult.documentId());
+            return;
+        }
 
         try {
             if (summaryResult.isSuccess()) {
