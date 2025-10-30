@@ -102,7 +102,75 @@ function showDocumentLoadError(errorMessage) {
 }
 
 // Filter documents based on search and filters
-function filterDocuments() {
+async function filterDocuments() {
+    if (!documentsTbody) return;
+
+    const searchTerm = searchInput?.value.trim() || '';
+    const contentTypeFilter = filterContentType?.value || '';
+    const sizeFilter = filterSize?.value || '';
+    const statusFilter = filterStatus?.value || '';
+    const searchIndicator = document.getElementById('search-indicator');
+
+    let documentsToDisplay;
+
+    try {
+        // If there's a search term, use Elasticsearch
+        if (searchTerm) {
+            console.log('🔍 Searching with Elasticsearch:', searchTerm);
+            
+            // Show search indicator
+            if (searchIndicator) {
+                searchIndicator.classList.remove('hidden');
+            }
+            
+            const searchResults = await apiRequest(API_CONFIG.ENDPOINTS.SEARCH(searchTerm));
+            
+            // Map search results to document format and merge with allDocuments to get full metadata
+            documentsToDisplay = searchResults
+                .map(result => {
+                    // Find the full document from allDocuments by ID
+                    const fullDoc = allDocuments.find(doc => doc.id === result.documentId);
+                    return fullDoc || null;
+                })
+                .filter(doc => doc !== null); // Remove any nulls
+            
+            console.log(`\u2705 Found ${documentsToDisplay.length} documents in Elasticsearch`);
+        } else {
+            // No search term, use all documents
+            documentsToDisplay = allDocuments;
+            
+            // Hide search indicator
+            if (searchIndicator) {
+                searchIndicator.classList.add('hidden');
+            }
+        }
+
+        // Apply client-side filters (content type, size, status)
+        const filtered = documentsToDisplay.filter(doc => {
+            // Content type filter
+            const matchesContentType = !contentTypeFilter ||
+                doc.contentType.startsWith(contentTypeFilter);
+
+            // Size filter
+            const matchesSize = matchesSizeFilter(doc.sizeBytes, sizeFilter);
+
+            // Status filter
+            const matchesStatus = !statusFilter || doc.status === statusFilter;
+
+            return matchesContentType && matchesSize && matchesStatus;
+        });
+
+        displayDocuments(filtered);
+    } catch (error) {
+        console.error('Error during search:', error);
+        // Fallback to client-side filtering on error
+        console.warn('⚠️ Elasticsearch search failed, falling back to client-side filtering');
+        clientSideFilter();
+    }
+}
+
+// Fallback client-side filtering (for when Elasticsearch is unavailable)
+function clientSideFilter() {
     if (!allDocuments || !documentsTbody) return;
 
     const searchTerm = searchInput?.value.toLowerCase() || '';
@@ -111,7 +179,7 @@ function filterDocuments() {
     const statusFilter = filterStatus?.value || '';
 
     const filtered = allDocuments.filter(doc => {
-        // Enhanced search filter - search across multiple fields including tags
+        // Client-side search filter - search across metadata fields
         const matchesSearch = !searchTerm ||
             doc.title.toLowerCase().includes(searchTerm) ||
             doc.originalFilename.toLowerCase().includes(searchTerm) ||

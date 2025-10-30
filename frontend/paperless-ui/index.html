@@ -79,7 +79,8 @@
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div class="relative flex-grow">
             <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-muted-light dark:text-muted-dark">search</span>
-            <input id="search-input" class="w-full bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg py-3 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all" placeholder="Search documents..." type="text"/>
+            <input id="search-input" class="w-full bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg py-3 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all" placeholder="Search documents and content..." type="text"/>
+            <span id="search-indicator" class="hidden absolute right-4 top-1/2 -translate-y-1/2 text-xs px-2 py-1 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 rounded-full font-medium">Searching OCR text</span>
           </div>
           <div class="flex items-center gap-2 flex-wrap">
             <select id="filter-content-type" class="px-4 py-2 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors text-sm font-medium text-muted-light dark:text-muted-dark focus:outline-none focus:ring-2 focus:ring-primary">

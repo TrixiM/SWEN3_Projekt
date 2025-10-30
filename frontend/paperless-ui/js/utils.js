@@ -11,7 +11,8 @@ export const API_CONFIG = {
         DOCUMENT_BY_ID: (id) => `/documents/${id}`,
         DOCUMENT_CONTENT: (id) => `/documents/${id}/content`,
         DOCUMENT_PAGES: (id, pageNumber, scale = 1.5) => `/documents/${id}/pages/${pageNumber}?scale=${scale}`,
-        DOCUMENT_PAGE_COUNT: (id) => `/documents/${id}/pages/count`
+        DOCUMENT_PAGE_COUNT: (id) => `/documents/${id}/pages/count`,
+        SEARCH: (query) => `/documents/search?q=${encodeURIComponent(query)}`
     }
 };
 

@@ -34,9 +34,13 @@ public class OcrProcessingService {
      * @return a CompletableFuture containing the OCR result
      */
     @Async
-    public CompletableFuture<OcrResultDto> processDocument(DocumentResponse document) {
-        log.info("🔄 Starting real OCR processing for document: {} ('{}'')", 
-                document.id(), document.title());
+    public CompletableFuture<OcrResultDto> processDocument(DocumentResponse document) { //CompletableFuture represents a future result of an asynchronous computation
+        log.info("🔄 Starting real OCR processing for document: {} ('{}'')",           // - essentially a placeholder for a value that will be computed and
+                document.id(), document.title());                                      //available at some point in the future. It allows your application to
+                                                                                        // continue executing other tasks while waiting for long-running operations
+                                                                                        //to complete.
+
+
         
         return CompletableFuture.supplyAsync(() -> {
             try {
