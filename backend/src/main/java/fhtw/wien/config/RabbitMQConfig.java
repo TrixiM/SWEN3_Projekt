@@ -30,32 +30,32 @@ public class RabbitMQConfig {
 
     @Bean
     public Queue documentCreatedQueue() {
-        return createQueueWithDLQ(DOCUMENT_CREATED_QUEUE);
+        return new Queue(DOCUMENT_CREATED_QUEUE, true);
     }
 
     @Bean
     public Queue documentDeletedQueue() {
-        return createQueueWithDLQ(DOCUMENT_DELETED_QUEUE);
+        return new Queue(DOCUMENT_DELETED_QUEUE, true);
     }
 
     @Bean
     public Queue documentCreatedAckQueue() {
-        return createQueueWithDLQ(DOCUMENT_CREATED_ACK_QUEUE);
+        return new Queue(DOCUMENT_CREATED_ACK_QUEUE, true);
     }
 
     @Bean
     public Queue documentDeletedAckQueue() {
-        return createQueueWithDLQ(DOCUMENT_DELETED_ACK_QUEUE);
+        return new Queue(DOCUMENT_DELETED_ACK_QUEUE, true);
     }
 
     @Bean
     public Queue ocrCompletedQueue() {
-        return createQueueWithDLQ(OCR_COMPLETED_QUEUE);
+        return new Queue(OCR_COMPLETED_QUEUE, true);
     }
 
     @Bean
     public Queue summaryResultQueue() {
-        return createQueueWithDLQ(SUMMARY_RESULT_QUEUE);
+        return new Queue(SUMMARY_RESULT_QUEUE, true);
     }
     
     // Dead Letter Queues

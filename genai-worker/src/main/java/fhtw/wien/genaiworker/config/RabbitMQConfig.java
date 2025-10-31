@@ -42,12 +42,12 @@ public class RabbitMQConfig {
 
     @Bean
     public Queue ocrCompletedQueue() {
-        return createQueueWithDLQ(OCR_COMPLETED_QUEUE);
+        return new Queue(OCR_COMPLETED_QUEUE, true);
     }
 
     @Bean
     public Queue summaryResultQueue() {
-        return createQueueWithDLQ(SUMMARY_RESULT_QUEUE);
+        return new Queue(SUMMARY_RESULT_QUEUE, true);
     }
     
     @Bean

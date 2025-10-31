@@ -33,7 +33,7 @@ public class RabbitMQConfig {
 
     @Bean
     public Queue documentCreatedQueue() {
-        return createQueueWithDLQ(DOCUMENT_CREATED_QUEUE);
+        return new Queue(DOCUMENT_CREATED_QUEUE, true);
     }
     
     @Bean

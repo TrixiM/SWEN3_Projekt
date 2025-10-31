@@ -19,9 +19,12 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - postgres
-      - minio
-      - elasticsearch
+      postgres:
+        condition: service_started
+      minio:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
     networks:
       - app-network
 
@@ -86,9 +89,12 @@ services:
     container_name: ocr-worker
     restart: always
     depends_on:
-      - rabbitmq
-      - minio
-      - elasticsearch
+      rabbitmq:
+        condition: service_started
+      minio:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
     environment:
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_PORT: 5672
