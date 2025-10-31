@@ -1,24 +1,24 @@
 package fhtw.wien.controller;
 
-
+import fhtw.wien.config.StorageConfiguration;
 import fhtw.wien.domain.Document;
-import fhtw.wien.dto.CreateDocumentDTO;
 import fhtw.wien.dto.DocumentResponse;
 import fhtw.wien.exception.InvalidRequestException;
 import fhtw.wien.service.DocumentService;
-import jakarta.validation.Valid;
+import fhtw.wien.util.DocumentMapper;
+import fhtw.wien.util.DocumentUpdateMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.net.URI;
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,9 +30,11 @@ public class DocumentController {
     private static final Logger log = LoggerFactory.getLogger(DocumentController.class);
 
     private final DocumentService service;
+    private final StorageConfiguration storageConfiguration;
 
-    public DocumentController(DocumentService service) {
+    public DocumentController(DocumentService service, StorageConfiguration storageConfiguration) {
         this.service = service;
+        this.storageConfiguration = storageConfiguration;
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -41,22 +43,26 @@ public class DocumentController {
             @RequestParam("title") String title,
             @RequestParam(value = "tags", required = false) List<String> tags
     ) throws IOException {
-        log.info("POST /v1/documents - Creating document with title: {}, filename: {}", title, file.getOriginalFilename());
+        final String originalFilename = StringUtils.cleanPath(file.getOriginalFilename() == null ? "" : file.getOriginalFilename());
+        log.info("POST /v1/documents - Creating document with title: {}, filename: {}", title, originalFilename);
         
         if (file.isEmpty()) {
             log.warn("Received empty file for document creation");
             throw new InvalidRequestException("File cannot be empty");
         }
+        if (!StringUtils.hasText(title)) {
+            throw new InvalidRequestException("Title cannot be empty");
+        }
         
         // Controller only handles HTTP concerns: file upload, request validation, response mapping
         var doc = new Document(
                 title,
-                file.getOriginalFilename(),
+                originalFilename,
                 file.getContentType(),
                 file.getSize(),
-                "local-storage",
-                "documents/" + System.currentTimeMillis() + "-" + file.getOriginalFilename(),
-                "file://" + file.getOriginalFilename(),
+                storageConfiguration.getDefaultBucket(),
+                storageConfiguration.generateObjectKey(originalFilename),
+                storageConfiguration.generateStorageUri(originalFilename),
                 null
         );
         doc.setPdfData(file.getBytes());
@@ -65,12 +71,12 @@ public class DocumentController {
         }
 
         var saved = service.create(doc);
-        var body = toResponse(saved);
+        var body = DocumentMapper.toResponse(saved);
         log.info("Document created successfully with ID: {}", saved.getId());
         return ResponseEntity.created(URI.create("/v1/documents/" + saved.getId())).body(body);
     }
 
-    @PutMapping("{id}") //still in construction
+    @PutMapping("{id}")
     public ResponseEntity<DocumentResponse> update(
             @PathVariable UUID id,
             @RequestBody Document updateRequest) {
@@ -79,50 +85,12 @@ public class DocumentController {
         // get existing document from DB
         Document existing = service.get(id);
 
-        // needs to be refined
-        if (updateRequest.getTitle() != null) {
-            existing.setTitle(updateRequest.getTitle());
-        }
-        if (updateRequest.getOriginalFilename() != null) {
-            existing.setOriginalFilename(updateRequest.getOriginalFilename());
-        }
-        if (updateRequest.getContentType() != null) {
-            existing.setContentType(updateRequest.getContentType());
-        }
-        if (updateRequest.getStatus() != null) {
-            existing.setStatus(updateRequest.getStatus());
-        }
-        if (updateRequest.getChecksumSha256() != null) {
-            existing.setChecksumSha256(updateRequest.getChecksumSha256());
-        }
-        if (updateRequest.getPdfData() != null) {
-            existing.setPdfData(updateRequest.getPdfData());
-        }
-        if (updateRequest.getTags() != null) {
-            existing.setTags(updateRequest.getTags());
-        }
-        // Endpoint still needs to be refined w optional and non editable fields
-
-        existing.setUpdatedAt(Instant.now()); // update timestamp
+        // apply updates safely
+        DocumentUpdateMapper.updateDocument(existing, updateRequest);
 
         Document updated = service.update(existing);
 
-        DocumentResponse response = new DocumentResponse(
-                updated.getId(),
-                updated.getTitle(),
-                updated.getOriginalFilename(),
-                updated.getContentType(),
-                updated.getSizeBytes(),
-                updated.getBucket(),
-                updated.getObjectKey(),
-                updated.getStorageUri(),
-                updated.getChecksumSha256(),
-                updated.getStatus(),
-                updated.getTags(),
-                updated.getVersion(),
-                updated.getCreatedAt(),
-                updated.getUpdatedAt()
-        );
+        DocumentResponse response = DocumentMapper.toResponse(updated);
 
         log.info("Document updated successfully with ID: {}", updated.getId());
         return ResponseEntity.ok(response);
@@ -134,7 +102,7 @@ public class DocumentController {
         log.info("GET /v1/documents - Retrieving all documents");
         // Controller only handles HTTP concerns: response mapping
         var documents = service.getAll().stream()
-                .map(DocumentController::toResponse)
+                .map(DocumentMapper::toResponse)
                 .toList();
         log.info("Retrieved {} documents", documents.size());
         return documents;
@@ -144,7 +112,7 @@ public class DocumentController {
     public DocumentResponse get(@PathVariable UUID id) {
         log.info("GET /v1/documents/{} - Retrieving document", id);
         // Controller only handles HTTP concerns: response mapping
-        var response = toResponse(service.get(id));
+        var response = DocumentMapper.toResponse(service.get(id));
         log.debug("Retrieved document: {}", id);
         return response;
     }
@@ -152,20 +120,28 @@ public class DocumentController {
     @GetMapping("{id}/content")
     public ResponseEntity<byte[]> getContent(@PathVariable UUID id) {
         log.info("GET /v1/documents/{}/content - Retrieving document content", id);
-        // Controller only handles HTTP concerns: response headers
-        var doc = service.get(id);
-        if (doc.getPdfData() == null) {
-            log.warn("PDF data not found for document: {}", id);
-            return ResponseEntity.notFound().build();
+        
+        try {
+            var doc = service.get(id);
+            byte[] pdfData = service.getDocumentContent(doc);
+            
+            if (pdfData == null || pdfData.length == 0) {
+                log.warn("PDF data not found or empty for document: {}", id);
+                return ResponseEntity.notFound().build();
+            }
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            headers.setContentDispositionFormData("inline", doc.getOriginalFilename());
+            headers.setContentLength(pdfData.length);
+
+            log.debug("Returning PDF content for document: {}, size: {} bytes", id, pdfData.length);
+            return new ResponseEntity<>(pdfData, headers, HttpStatus.OK);
+            
+        } catch (Exception e) {
+            log.error("Failed to retrieve document content: {}", id, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.setContentDispositionFormData("inline", doc.getOriginalFilename());
-        headers.setContentLength(doc.getPdfData().length);
-
-        log.debug("Returning PDF content for document: {}, size: {} bytes", id, doc.getPdfData().length);
-        return new ResponseEntity<>(doc.getPdfData(), headers, HttpStatus.OK);
     }
 
     @GetMapping("{id}/pages/{pageNumber}")
@@ -210,23 +186,5 @@ public class DocumentController {
         log.info("Document deleted successfully: {}", id);
     }
 
-    private static DocumentResponse toResponse(Document d) {
-        return new DocumentResponse(
-                d.getId(),
-                d.getTitle(),
-                d.getOriginalFilename(),
-                d.getContentType(),
-                d.getSizeBytes(),
-                d.getBucket(),
-                d.getObjectKey(),
-                d.getStorageUri(),
-                d.getChecksumSha256(),
-                d.getStatus(),
-                d.getTags(),
-                d.getVersion(),
-                d.getCreatedAt(),
-                d.getUpdatedAt()
-        );
-    }
 }
 

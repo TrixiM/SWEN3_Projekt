@@ -7,6 +7,7 @@ import fhtw.wien.exception.NotFoundException;
 import fhtw.wien.messaging.DocumentMessageProducer;
 import fhtw.wien.repo.DocumentRepo;
 import fhtw.wien.service.DocumentService;
+import fhtw.wien.service.MinIOStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
@@ -20,6 +21,7 @@ import static org.mockito.Mockito.*;
 class DocumentServiceTest {
 
     private DocumentRepo repo;
+    private MinIOStorageService minioStorageService;
     private DocumentBusinessLogic documentBusinessLogic;
     private PdfRenderingBusinessLogic pdfRenderingBusinessLogic;
     private DocumentMessageProducer messageProducer;
@@ -28,7 +30,8 @@ class DocumentServiceTest {
     @BeforeEach
     void setUp() {
         repo = mock(DocumentRepo.class);
-        documentBusinessLogic = new DocumentBusinessLogic(repo);
+        minioStorageService = mock(MinIOStorageService.class);
+        documentBusinessLogic = new DocumentBusinessLogic(repo, minioStorageService);
         pdfRenderingBusinessLogic = mock(PdfRenderingBusinessLogic.class);
         messageProducer = mock(DocumentMessageProducer.class);
         service = new DocumentService(documentBusinessLogic, pdfRenderingBusinessLogic, messageProducer);

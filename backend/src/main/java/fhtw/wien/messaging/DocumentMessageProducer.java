@@ -1,6 +1,6 @@
 package fhtw.wien.messaging;
 
-import fhtw.wien.config.RabbitMQConfig;
+import static fhtw.wien.config.MessagingConstants.*;
 import fhtw.wien.dto.DocumentResponse;
 import fhtw.wien.exception.MessagingException;
 import org.slf4j.Logger;
@@ -25,8 +25,8 @@ public class DocumentMessageProducer {
         log.info("Publishing document created event for document ID: {}", document.id());
         try {
             rabbitTemplate.convertAndSend(
-                    RabbitMQConfig.DOCUMENT_EXCHANGE,
-                    RabbitMQConfig.DOCUMENT_CREATED_ROUTING_KEY,
+                    DOCUMENT_EXCHANGE,
+                    DOCUMENT_CREATED_ROUTING_KEY,
                     document
             );
             log.debug("Successfully published document created event for ID: {}", document.id());
@@ -40,8 +40,8 @@ public class DocumentMessageProducer {
         log.info("Publishing document deleted event for document ID: {}", documentId);
         try {
             rabbitTemplate.convertAndSend(
-                    RabbitMQConfig.DOCUMENT_EXCHANGE,
-                    RabbitMQConfig.DOCUMENT_DELETED_ROUTING_KEY,
+                    DOCUMENT_EXCHANGE,
+                    DOCUMENT_DELETED_ROUTING_KEY,
                     documentId.toString()
             );
             log.debug("Successfully published document deleted event for ID: {}", documentId);

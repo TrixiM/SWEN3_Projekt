@@ -17,6 +17,7 @@ public record DocumentResponse(
         String checksumSha256,
         DocumentStatus status,
         List<String> tags,
+        String summary,
         int version,
         Instant createdAt,
         Instant updatedAt

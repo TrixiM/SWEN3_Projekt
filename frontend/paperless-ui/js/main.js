@@ -1,5 +1,14 @@
-// API base URL - nginx proxies /api/ to backend service
-const API_BASE = '/api';
+import { 
+    API_CONFIG, 
+    TOAST_TYPES, 
+    showMessage, 
+    escapeHtml, 
+    formatBytes, 
+    formatDate, 
+    apiRequest, 
+    validateFile, 
+    debounce 
+} from './utils.js';
 
 // DOM elements
 let documentsTbody;
@@ -11,6 +20,14 @@ let filterStatus;
 
 // Store all documents for filtering
 let allDocuments = [];
+
+// Constants
+const FILTER_DEBOUNCE_DELAY = 300;
+const SIZE_FILTERS = {
+    SMALL: { max: 1024 * 1024 }, // < 1MB
+    MEDIUM: { min: 1024 * 1024, max: 10 * 1024 * 1024 }, // 1-10MB
+    LARGE: { min: 10 * 1024 * 1024 } // > 10MB
+};
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
@@ -29,14 +46,17 @@ function initializeDOM() {
 }
 
 function setupEventListeners() {
+    const debouncedFilter = debounce(filterDocuments, FILTER_DEBOUNCE_DELAY); //Creates a version of filterDocuments that only runs after the user stops triggering it for a set delay.
+
+
     // File upload on file input change
     if (fileInput) {
         fileInput.addEventListener('change', handleFileUpload);
     }
 
-    // Search input
+    // Search input with debouncing
     if (searchInput) {
-        searchInput.addEventListener('input', filterDocuments);
+        searchInput.addEventListener('input', debouncedFilter);
     }
 
     // Filter dropdowns
@@ -55,32 +75,102 @@ function setupEventListeners() {
 async function loadDocuments() {
     try {
         console.log('Loading documents...');
-        const response = await fetch(`${API_BASE}/documents`);
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        allDocuments = await response.json();
+        allDocuments = await apiRequest(API_CONFIG.ENDPOINTS.DOCUMENTS);
         console.log('Documents loaded:', allDocuments);
         filterDocuments();
     } catch (error) {
         console.error('Error loading documents:', error);
-        if (documentsTbody) {
-            documentsTbody.innerHTML = `
-                <tr class="border-b border-border-light dark:border-border-dark">
-                    <td colspan="6" class="px-6 py-8 text-center text-red-500">
-                        Error loading documents: ${escapeHtml(error.message)}
-                        <br><span class="text-sm text-muted-light dark:text-muted-dark">Make sure the backend is running and accessible.</span>
-                    </td>
-                </tr>
-            `;
-        }
+        showDocumentLoadError(error.message);
+    }
+}
+
+/**
+ * Shows an error message in the documents table when loading fails.
+ * @param {string} errorMessage - The error message to display
+ */
+function showDocumentLoadError(errorMessage) {
+    if (documentsTbody) {
+        documentsTbody.innerHTML = `
+            <tr class="border-b border-border-light dark:border-border-dark">
+                <td colspan="6" class="px-6 py-8 text-center text-red-500">
+                    Error loading documents: ${escapeHtml(errorMessage)}
+                    <br><span class="text-sm text-muted-light dark:text-muted-dark">Make sure the backend is running and accessible.</span>
+                </td>
+            </tr>
+        `;
     }
 }
 
 // Filter documents based on search and filters
-function filterDocuments() {
+async function filterDocuments() {
+    if (!documentsTbody) return;
+
+    const searchTerm = searchInput?.value.trim() || '';
+    const contentTypeFilter = filterContentType?.value || '';
+    const sizeFilter = filterSize?.value || '';
+    const statusFilter = filterStatus?.value || '';
+    const searchIndicator = document.getElementById('search-indicator');
+
+    let documentsToDisplay;
+
+    try {
+        // If there's a search term, use Elasticsearch
+        if (searchTerm) {
+            console.log('🔍 Searching with Elasticsearch:', searchTerm);
+            
+            // Show search indicator
+            if (searchIndicator) {
+                searchIndicator.classList.remove('hidden');
+            }
+            
+            const searchResults = await apiRequest(API_CONFIG.ENDPOINTS.SEARCH(searchTerm));
+            
+            // Map search results to document format and merge with allDocuments to get full metadata
+            documentsToDisplay = searchResults
+                .map(result => {
+                    // Find the full document from allDocuments by ID
+                    const fullDoc = allDocuments.find(doc => doc.id === result.documentId);
+                    return fullDoc || null;
+                })
+                .filter(doc => doc !== null); // Remove any nulls
+            
+            console.log(`\u2705 Found ${documentsToDisplay.length} documents in Elasticsearch`);
+        } else {
+            // No search term, use all documents
+            documentsToDisplay = allDocuments;
+            
+            // Hide search indicator
+            if (searchIndicator) {
+                searchIndicator.classList.add('hidden');
+            }
+        }
+
+        // Apply client-side filters (content type, size, status)
+        const filtered = documentsToDisplay.filter(doc => {
+            // Content type filter
+            const matchesContentType = !contentTypeFilter ||
+                doc.contentType.startsWith(contentTypeFilter);
+
+            // Size filter
+            const matchesSize = matchesSizeFilter(doc.sizeBytes, sizeFilter);
+
+            // Status filter
+            const matchesStatus = !statusFilter || doc.status === statusFilter;
+
+            return matchesContentType && matchesSize && matchesStatus;
+        });
+
+        displayDocuments(filtered);
+    } catch (error) {
+        console.error('Error during search:', error);
+        // Fallback to client-side filtering on error
+        console.warn('⚠️ Elasticsearch search failed, falling back to client-side filtering');
+        clientSideFilter();
+    }
+}
+
+// Fallback client-side filtering (for when Elasticsearch is unavailable)
+function clientSideFilter() {
     if (!allDocuments || !documentsTbody) return;
 
     const searchTerm = searchInput?.value.toLowerCase() || '';
@@ -89,7 +179,7 @@ function filterDocuments() {
     const statusFilter = filterStatus?.value || '';
 
     const filtered = allDocuments.filter(doc => {
-        // Enhanced search filter - search across multiple fields including tags
+        // Client-side search filter - search across metadata fields
         const matchesSearch = !searchTerm ||
             doc.title.toLowerCase().includes(searchTerm) ||
             doc.originalFilename.toLowerCase().includes(searchTerm) ||
@@ -104,14 +194,7 @@ function filterDocuments() {
             doc.contentType.startsWith(contentTypeFilter);
 
         // Size filter
-        let matchesSize = true;
-        if (sizeFilter === 'small') {
-            matchesSize = doc.sizeBytes < 1024 * 1024; // < 1MB
-        } else if (sizeFilter === 'medium') {
-            matchesSize = doc.sizeBytes >= 1024 * 1024 && doc.sizeBytes <= 10 * 1024 * 1024; // 1-10MB
-        } else if (sizeFilter === 'large') {
-            matchesSize = doc.sizeBytes > 10 * 1024 * 1024; // > 10MB
-        }
+        const matchesSize = matchesSizeFilter(doc.sizeBytes, sizeFilter);
 
         // Status filter
         const matchesStatus = !statusFilter || doc.status === statusFilter;
@@ -120,6 +203,24 @@ function filterDocuments() {
     });
 
     displayDocuments(filtered);
+}
+
+/**
+ * Checks if a document's size matches the specified filter.
+ * @param {number} sizeBytes - The document size in bytes
+ * @param {string} filter - The size filter ('small', 'medium', 'large', or '')
+ * @returns {boolean} Whether the size matches the filter
+ */
+function matchesSizeFilter(sizeBytes, filter) {
+    if (!filter) return true;
+    
+    const filterConfig = SIZE_FILTERS[filter.toUpperCase()];
+    if (!filterConfig) return true;
+    
+    const withinMin = !filterConfig.min || sizeBytes >= filterConfig.min;
+    const withinMax = !filterConfig.max || sizeBytes < filterConfig.max;
+    
+    return withinMin && withinMax;
 }
 
 // Display documents in the table
@@ -220,57 +321,97 @@ async function handleFileUpload() {
         return;
     }
 
-    // Get tags input if exists
-    const tagsInput = document.getElementById('tags-input');
-    let tags = [];
-    if (tagsInput && tagsInput.value.trim()) {
-        // Split by comma and trim each tag
-        tags = tagsInput.value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-    }
-
+    const tags = getTagsFromInput();
+    const successfulUploads = [];
+    
     // Upload each file
     for (const file of files) {
         try {
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('title', file.name);
+            // Validate file before upload
+            const validation = validateFile(file);
+            if (!validation.isValid) {
+                showMessage(`File "${file.name}": ${validation.error}`, TOAST_TYPES.ERROR);
+                continue;
+            }
+
+            await uploadSingleFile(file, tags);
+            successfulUploads.push(file.name);
             
-            // Append each tag as a separate form field
-            if (tags.length > 0) {
-                tags.forEach(tag => {
-                    formData.append('tags', tag);
-                });
-            }
-
-            console.log('Uploading document:', file.name, 'with tags:', tags);
-
-            const response = await fetch(`${API_BASE}/documents`, {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const result = await response.json();
-            console.log('Document uploaded:', result);
-
-            // Show success message
-            showMessage(`Document "${file.name}" uploaded successfully!`, 'success');
-
         } catch (error) {
             console.error('Error uploading document:', error);
-            showMessage(`Error uploading "${file.name}": ${error.message}`, 'danger');
+            showMessage(`Error uploading "${file.name}": ${error.message}`, TOAST_TYPES.ERROR);
         }
     }
 
-    // Clear the file input, tags input, and reload documents
+    // Clear inputs and reload documents if any uploads succeeded
+    if (successfulUploads.length > 0) {
+        clearUploadForm();
+        loadDocuments();
+        
+        if (successfulUploads.length === 1) {
+            showMessage(`Document "${successfulUploads[0]}" uploaded successfully!`, TOAST_TYPES.SUCCESS);
+        } else {
+            showMessage(`${successfulUploads.length} documents uploaded successfully!`, TOAST_TYPES.SUCCESS);
+        }
+    }
+}
+
+/**
+ * Extracts tags from the tags input field.
+ * @returns {string[]} Array of cleaned tag strings
+ */
+function getTagsFromInput() {
+    const tagsInput = document.getElementById('tags-input');
+    if (!tagsInput || !tagsInput.value.trim()) {
+        return [];
+    }
+    
+    return tagsInput.value
+        .split(',')
+        .map(tag => tag.trim())
+        .filter(tag => tag.length > 0);
+}
+
+/**
+ * Uploads a single file with the specified tags.
+ * @param {File} file - The file to upload
+ * @param {string[]} tags - Array of tags to associate with the file
+ */
+async function uploadSingleFile(file, tags) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('title', file.name);
+    
+    // Append each tag as a separate form field
+    tags.forEach(tag => {
+        formData.append('tags', tag);
+    });
+
+    console.log('Uploading document:', file.name, 'with tags:', tags);
+
+    const response = await fetch(API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.DOCUMENTS, {
+        method: 'POST',
+        body: formData
+    });
+
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    console.log('Document uploaded:', result);
+    return result;
+}
+
+/**
+ * Clears the upload form inputs.
+ */
+function clearUploadForm() {
     fileInput.value = '';
+    const tagsInput = document.getElementById('tags-input');
     if (tagsInput) {
         tagsInput.value = '';
     }
-    loadDocuments();
 }
 
 // Delete a document
@@ -280,76 +421,21 @@ async function deleteDocument(documentId) {
     }
     
     try {
-        const response = await fetch(`${API_BASE}/documents/${documentId}`, {
+        await apiRequest(API_CONFIG.ENDPOINTS.DOCUMENT_BY_ID(documentId), {
             method: 'DELETE'
         });
         
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
         console.log('Document deleted:', documentId);
         loadDocuments();
-        showMessage('Document deleted successfully!', 'success');
+        showMessage('Document deleted successfully!', TOAST_TYPES.SUCCESS);
         
     } catch (error) {
         console.error('Error deleting document:', error);
-        showMessage(`Error deleting document: ${error.message}`, 'danger');
+        showMessage(`Error deleting document: ${error.message}`, TOAST_TYPES.ERROR);
     }
 }
 
-// Utility functions
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-function formatBytes(bytes, decimals = 2) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const dm = decimals < 0 ? 0 : decimals;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-}
-
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diff = now - date;
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-
-    if (days === 0) {
-        return 'Today';
-    } else if (days === 1) {
-        return 'Yesterday';
-    } else if (days < 7) {
-        return `${days} days ago`;
-    } else {
-        return date.toLocaleDateString();
-    }
-}
-
-function showMessage(message, type) {
-    // Create a notification toast
-    const toast = document.createElement('div');
-    const bgColor = type === 'success' ? 'bg-green-500' : type === 'danger' ? 'bg-red-500' : 'bg-blue-500';
-    toast.className = `fixed top-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-opacity duration-300`;
-    toast.textContent = message;
-
-    document.body.appendChild(toast);
-
-    // Auto-remove after 3 seconds
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        setTimeout(() => {
-            if (toast.parentNode) {
-                toast.remove();
-            }
-        }, 300);
-    }, 3000);
-}
+// Utility functions are now imported from utils.js
 
 // PDF Preview functionality
 let currentDocumentId = null;
@@ -374,12 +460,7 @@ async function openPdfPreview(documentId, title) {
 
     try {
         // Fetch page count from backend
-        const countResponse = await fetch(`${API_BASE}/documents/${documentId}/pages/count`);
-        if (!countResponse.ok) {
-            throw new Error(`Failed to load PDF: ${countResponse.status}`);
-        }
-
-        totalPages = await countResponse.json();
+        totalPages = await apiRequest(API_CONFIG.ENDPOINTS.DOCUMENT_PAGE_COUNT(documentId));
         currentDocumentId = documentId;
         currentPage = 1;
 
@@ -414,7 +495,7 @@ async function renderPage(pageNum) {
         image.style.display = 'none';
 
         // Fetch rendered page from backend
-        const response = await fetch(`${API_BASE}/documents/${currentDocumentId}/pages/${pageNum}?scale=1.5`);
+        const response = await fetch(API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.DOCUMENT_PAGES(currentDocumentId, pageNum, 1.5));
         if (!response.ok) {
             throw new Error(`Failed to render page: ${response.status}`);
         }
@@ -470,6 +551,14 @@ function nextPage() {
     currentPage++;
     renderPage(currentPage);
 }
+
+// Make functions globally available for inline onclick handlers
+window.editDocument = editDocument;
+window.deleteDocument = deleteDocument;
+window.openPdfPreview = openPdfPreview;
+window.closePdfModal = closePdfModal;
+window.previousPage = previousPage;
+window.nextPage = nextPage;
 
 // Close modal when clicking outside
 document.addEventListener('DOMContentLoaded', function() {
