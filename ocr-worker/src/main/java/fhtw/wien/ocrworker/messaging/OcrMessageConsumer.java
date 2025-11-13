@@ -19,6 +19,7 @@ import java.time.Instant;
 public class OcrMessageConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(OcrMessageConsumer.class);
+    private static final String IDEMPOTENCY_PREFIX = "ocr-doc-";
 
     private final RabbitTemplate rabbitTemplate;
     private final OcrProcessingService ocrProcessingService;
@@ -38,64 +39,117 @@ public class OcrMessageConsumer {
         log.info("📄 OCR WORKER RECEIVED: Document created - ID: {}, Title: '{}'",
                 document.id(), document.title());
         
-        // Idempotency check
-        String messageId = "ocr-doc-" + document.id();
-        if (!idempotencyService.tryMarkAsProcessed(messageId)) {
-            log.info("⏭️ Skipping duplicate document processing: {}", document.id());
+        if (!checkIdempotency(document)) {
             return;
         }
         
+        logDocumentDetails(document);
+        
+        log.info("🔄 Delegating OCR processing to service...");
+        ocrProcessingService.processDocument(document)
+                .whenComplete((ocrResult, throwable) -> 
+                        handleOcrCompletion(document, ocrResult, throwable));
+    }
+    
+    /**
+     * Checks idempotency to prevent duplicate processing.
+     */
+    private boolean checkIdempotency(DocumentResponse document) {
+        String messageId = IDEMPOTENCY_PREFIX + document.id();
+        if (!idempotencyService.tryMarkAsProcessed(messageId)) {
+            log.info("⏭️ Skipping duplicate document processing: {}", document.id());
+            return false;
+        }
+        return true;
+    }
+    
+    /**
+     * Logs document details for debugging.
+     */
+    private void logDocumentDetails(DocumentResponse document) {
         log.info("📋 Document Details:");
         log.info("   - Filename: {}", document.originalFilename());
         log.info("   - Content Type: {}", document.contentType());
         log.info("   - Size: {} bytes", document.sizeBytes());
         log.info("   - Status: {}", document.status());
+    }
+    
+    /**
+     * Handles OCR processing completion (success or failure).
+     */
+    private void handleOcrCompletion(DocumentResponse document, OcrResultDto ocrResult, Throwable throwable) {
+        if (throwable != null) {
+            handleOcrFailure(document, throwable);
+        } else {
+            handleOcrSuccess(document, ocrResult);
+        }
+    }
+    
+    /**
+     * Handles OCR processing failure.
+     */
+    private void handleOcrFailure(DocumentResponse document, Throwable throwable) {
+        log.error("❌ OCR processing failed for document: {}", document.id(), throwable);
         
-        // Process document using the improved async service
-        log.info("🔄 Delegating OCR processing to service...");
+        OcrAcknowledgment failureAck = new OcrAcknowledgment(
+                document.id(),
+                document.title(),
+                "FAILED",
+                "Processing failed: " + throwable.getMessage(),
+                Instant.now()
+        );
+        sendAcknowledgment(failureAck);
+    }
+    
+    /**
+     * Handles OCR processing success.
+     */
+    private void handleOcrSuccess(DocumentResponse document, OcrResultDto ocrResult) {
+        log.info("✅ OCR processing completed for document: {} with status: {}", 
+                document.id(), ocrResult.status());
         
-        ocrProcessingService.processDocument(document)
-                .whenComplete((ocrResult, throwable) -> {
-                    if (throwable != null) {
-                        log.error("❌ OCR processing failed for document: {}", document.id(), throwable);
-                        // Send failure acknowledgment
-                        OcrAcknowledgment failureAck = new OcrAcknowledgment(
-                                document.id(),
-                                document.title(),
-                                "FAILED",
-                                "Processing failed: " + throwable.getMessage(),
-                                Instant.now()
-                        );
-                        sendAcknowledgment(failureAck);
-                    } else {
-                        log.info("✅ OCR processing completed for document: {} with status: {}", 
-                                document.id(), ocrResult.status());
-                        
-                        // Index document in Elasticsearch if OCR was successful
-                        if (ocrResult.isSuccess() && ocrResult.extractedText() != null && !ocrResult.extractedText().isEmpty()) {
-                            try {
-                                elasticsearchService.indexDocument(ocrResult);
-                                log.info("📇 Document {} successfully indexed in Elasticsearch", document.id());
-                            } catch (Exception e) {
-                                log.error("❌ Failed to index document {} in Elasticsearch: {}", 
-                                        document.id(), e.getMessage(), e);
-                            }
-                        }
-                        
-                        // Send OCR result to GenAI worker for summarization
-                        sendOcrCompletionMessage(ocrResult);
-                        
-                        // Send acknowledgment (for backward compatibility)
-                        OcrAcknowledgment ack = new OcrAcknowledgment(
-                                document.id(),
-                                document.title(),
-                                ocrResult.status(),
-                                ocrResult.getSummary(),
-                                Instant.now()
-                        );
-                        sendAcknowledgment(ack);
-                    }
-                });
+        if (shouldIndexDocument(ocrResult)) {
+            indexDocumentInElasticsearch(ocrResult);
+        }
+        
+        sendOcrCompletionMessage(ocrResult);
+        sendSuccessAcknowledgment(document, ocrResult);
+    }
+    
+    /**
+     * Determines if document should be indexed in Elasticsearch.
+     */
+    private boolean shouldIndexDocument(OcrResultDto ocrResult) {
+        return ocrResult.isSuccess() && 
+               ocrResult.extractedText() != null && 
+               !ocrResult.extractedText().isEmpty();
+    }
+    
+    /**
+     * Indexes document in Elasticsearch.
+     */
+    private void indexDocumentInElasticsearch(OcrResultDto ocrResult) {
+        try {
+            elasticsearchService.indexDocument(ocrResult);
+            log.info("📇 Document {} successfully indexed in Elasticsearch", ocrResult.documentId());
+        } catch (Exception e) {
+            log.error("❌ Failed to index document {} in Elasticsearch: {}", 
+                    ocrResult.documentId(), e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Sends success acknowledgment.
+     */
+    private void sendSuccessAcknowledgment(DocumentResponse document, OcrResultDto ocrResult) {
+        OcrAcknowledgment ack = new OcrAcknowledgment(
+                document.id(),
+                document.title(),
+                ocrResult.status(),
+                ocrResult.getSummary(),
+                Instant.now()
+        );
+        sendAcknowledgment(ack);
     }
     
     /**
@@ -116,13 +170,13 @@ public class OcrMessageConsumer {
     }
     
     /**
-     * Helper method to send acknowledgment messages.
+     * Sends acknowledgment message to the queue.
      */
     private void sendAcknowledgment(OcrAcknowledgment acknowledgment) {
         try {
             rabbitTemplate.convertAndSend(
                     RabbitMQConfig.DOCUMENT_EXCHANGE,
-                    "document.created.ack",
+                    "document.created.ack", // TODO: Move to RabbitMQConfig constants
                     acknowledgment
             );
             log.info("📤 Sent acknowledgment to queue for document: {}", acknowledgment.documentId());

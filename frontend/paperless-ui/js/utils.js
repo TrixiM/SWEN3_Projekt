@@ -12,8 +12,12 @@ export const API_CONFIG = {
         DOCUMENT_CONTENT: (id) => `/documents/${id}/content`,
         DOCUMENT_PAGES: (id, pageNumber, scale = 1.5) => `/documents/${id}/pages/${pageNumber}?scale=${scale}`,
         DOCUMENT_PAGE_COUNT: (id) => `/documents/${id}/pages/count`,
-        SEARCH: (query) => `/documents/search?q=${encodeURIComponent(query)}`
+        // Elasticsearch search endpoints
+        SEARCH_ALL: (query) => `/documents/search?q=${encodeURIComponent(query)}`,
+        SEARCH_TITLE: (query) => `/documents/search/title?q=${encodeURIComponent(query)}`,
+        SEARCH_CONTENT: (query) => `/documents/search/content?q=${encodeURIComponent(query)}`
     }
+};
 };
 
 // Toast notification types

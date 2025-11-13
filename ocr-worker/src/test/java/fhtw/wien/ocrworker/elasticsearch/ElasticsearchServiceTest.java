@@ -7,13 +7,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
-import org.springframework.data.elasticsearch.core.SearchHit;
-import org.springframework.data.elasticsearch.core.SearchHits;
-import org.springframework.data.elasticsearch.core.query.Query;
 
-import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -27,20 +21,11 @@ class ElasticsearchServiceTest {
     @Mock
     private DocumentIndexRepository repository;
     
-    @Mock
-    private ElasticsearchOperations elasticsearchOperations;
-    
-    @Mock
-    private SearchHits<DocumentIndex> searchHits;
-    
-    @Mock
-    private SearchHit<DocumentIndex> searchHit;
-    
     private ElasticsearchService service;
     
     @BeforeEach
     void setUp() {
-        service = new ElasticsearchService(repository, elasticsearchOperations);
+        service = new ElasticsearchService(repository);
     }
     
     @Test
@@ -118,86 +103,6 @@ class ElasticsearchServiceTest {
         verify(repository).save(any(DocumentIndex.class));
     }
     
-    @Test
-    void testSearch_Success() {
-        // Arrange
-        String query = "test query";
-        UUID documentId = UUID.randomUUID();
-        
-        DocumentIndex doc1 = new DocumentIndex(
-                documentId,
-                "Test Document",
-                "This is a test query document",
-                28,
-                1,
-                "eng",
-                85,
-                Instant.now()
-        );
-        
-        when(searchHit.getContent()).thenReturn(doc1);
-        when(searchHits.stream()).thenReturn(List.of(searchHit).stream());
-        when(elasticsearchOperations.search(any(Query.class), eq(DocumentIndex.class)))
-                .thenReturn(searchHits);
-        
-        // Act
-        List<DocumentIndex> results = service.search(query);
-        
-        // Assert
-        assertNotNull(results);
-        assertEquals(1, results.size());
-        assertEquals(doc1.getDocumentId(), results.get(0).getDocumentId());
-        assertEquals(doc1.getTitle(), results.get(0).getTitle());
-        
-        verify(elasticsearchOperations).search(any(Query.class), eq(DocumentIndex.class));
-    }
-    
-    @Test
-    void testSearch_NoResults() {
-        // Arrange
-        String query = "nonexistent";
-        
-        when(searchHits.stream()).thenReturn(List.<SearchHit<DocumentIndex>>of().stream());
-        when(elasticsearchOperations.search(any(Query.class), eq(DocumentIndex.class)))
-                .thenReturn(searchHits);
-        
-        // Act
-        List<DocumentIndex> results = service.search(query);
-        
-        // Assert
-        assertNotNull(results);
-        assertTrue(results.isEmpty());
-        
-        verify(elasticsearchOperations).search(any(Query.class), eq(DocumentIndex.class));
-    }
-    
-    @Test
-    void testFindByDocumentId() {
-        // Arrange
-        UUID documentId = UUID.randomUUID();
-        DocumentIndex expectedDoc = new DocumentIndex(
-                documentId,
-                "Test Document",
-                "Test content",
-                12,
-                1,
-                "eng",
-                85,
-                Instant.now()
-        );
-        
-        when(repository.findByDocumentId(documentId)).thenReturn(expectedDoc);
-        
-        // Act
-        DocumentIndex result = service.findByDocumentId(documentId);
-        
-        // Assert
-        assertNotNull(result);
-        assertEquals(documentId, result.getDocumentId());
-        assertEquals("Test Document", result.getTitle());
-        
-        verify(repository).findByDocumentId(documentId);
-    }
     
     @Test
     void testDeleteDocument_Success() {

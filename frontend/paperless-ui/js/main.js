@@ -123,7 +123,7 @@ async function filterDocuments() {
                 searchIndicator.classList.remove('hidden');
             }
             
-            const searchResults = await apiRequest(API_CONFIG.ENDPOINTS.SEARCH(searchTerm));
+            const searchResults = await apiRequest(API_CONFIG.ENDPOINTS.SEARCH_ALL(searchTerm));
             
             // Map search results to document format and merge with allDocuments to get full metadata
             documentsToDisplay = searchResults

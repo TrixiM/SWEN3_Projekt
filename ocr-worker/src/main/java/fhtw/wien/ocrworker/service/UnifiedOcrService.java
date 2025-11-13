@@ -3,6 +3,7 @@ package fhtw.wien.ocrworker.service;
 import fhtw.wien.ocrworker.config.OcrConfig;
 import fhtw.wien.ocrworker.dto.DocumentResponse;
 import fhtw.wien.ocrworker.dto.OcrResultDto;
+import fhtw.wien.ocrworker.service.model.OcrResult;
 import fhtw.wien.ocrworker.util.FileTypeDetector;
 import net.sourceforge.tess4j.TesseractException;
 import org.slf4j.Logger;
@@ -211,7 +212,7 @@ public class UnifiedOcrService {
                 byte[] imageData = pdfConverterService.preprocessImage(pageImages.get(i));
                 
                 // Extract text with confidence
-                TesseractOcrService.OcrResult ocrResult = tesseractOcrService.extractTextWithConfidence(
+                OcrResult ocrResult = tesseractOcrService.extractTextWithConfidence(
                         imageData, ocrConfig.getDefaultLanguage());
                 
                 long pageProcessingTime = System.currentTimeMillis() - pageStartTime;
@@ -219,25 +220,25 @@ public class UnifiedOcrService {
                 // Create page result
                 OcrResultDto.PageResult pageResult = OcrResultDto.fromTesseractResult(
                         pageNumber, 
-                        ocrResult.getText(), 
-                        ocrResult.getConfidence(),
+                        ocrResult.text(), 
+                        ocrResult.confidence(),
                         pageProcessingTime
                 );
                 
                 pageResults.add(pageResult);
                 
                 // Append to full text
-                if (!ocrResult.getText().isEmpty()) {
+                if (!ocrResult.text().isEmpty()) {
                     if (fullText.length() > 0) {
                         fullText.append("\n\n--- Page ").append(pageNumber).append(" ---\n");
                     }
-                    fullText.append(ocrResult.getText());
+                    fullText.append(ocrResult.text());
                 }
                 
-                totalConfidence += ocrResult.getConfidence();
+                totalConfidence += ocrResult.confidence();
                 
                 log.debug("Processed page {}/{}: {} characters, {}% confidence", 
-                         pageNumber, pageImages.size(), ocrResult.getText().length(), ocrResult.getConfidence());
+                         pageNumber, pageImages.size(), ocrResult.text().length(), ocrResult.confidence());
                 
             } catch (Exception e) {
                 log.error("Failed to process page {} of document {}", pageNumber, document.id(), e);
@@ -282,22 +283,22 @@ public class UnifiedOcrService {
         byte[] processedImageData = pdfConverterService.preprocessImage(imageData);
         
         // Extract text with confidence
-        TesseractOcrService.OcrResult ocrResult = tesseractOcrService.extractTextWithConfidence(
+        OcrResult ocrResult = tesseractOcrService.extractTextWithConfidence(
                 processedImageData, ocrConfig.getDefaultLanguage());
         
         long processingTime = System.currentTimeMillis() - startTime;
         
         // Create single page result
         OcrResultDto.PageResult pageResult = OcrResultDto.fromTesseractResult(
-                1, ocrResult.getText(), ocrResult.getConfidence(), processingTime);
+                1, ocrResult.text(), ocrResult.confidence(), processingTime);
         
         return OcrResultDto.success(
                 document.id(),
                 document.title(),
-                ocrResult.getText(),
+                ocrResult.text(),
                 List.of(pageResult),
                 ocrConfig.getDefaultLanguage(),
-                ocrResult.getConfidence(),
+                ocrResult.confidence(),
                 processingTime
         );
     }

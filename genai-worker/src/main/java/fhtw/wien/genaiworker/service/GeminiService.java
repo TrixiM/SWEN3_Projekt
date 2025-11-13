@@ -2,6 +2,7 @@ package fhtw.wien.genaiworker.service;
 
 import fhtw.wien.genaiworker.config.GenAIConfig;
 import fhtw.wien.genaiworker.exception.GenAIException;
+import fhtw.wien.genaiworker.service.model.GeminiApiResponse;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.github.resilience4j.retry.annotation.Retry;
@@ -21,13 +22,19 @@ import java.util.Map;
 /**
  * Service for interacting with Google Gemini API.
  * Generates text summaries from document content using the Gemini Pro model.
+ * Thread-safe and protected by resilience4j patterns (circuit breaker, retry, rate limiter).
  */
 @Service
 public class GeminiService {
 
     private static final Logger log = LoggerFactory.getLogger(GeminiService.class);
     
-    private static final int MAX_INPUT_LENGTH = 50000; // Gemini Pro limit
+    // API Limits and Configuration
+    private static final int MAX_INPUT_LENGTH = 50_000; // Gemini Pro character limit
+    private static final int MIN_CONFIDENCE_THRESHOLD = 70; // Minimum confidence for "high confidence"
+    private static final double TOP_P = 0.8;
+    private static final int TOP_K = 40;
+    
     private static final String SUMMARY_PROMPT_TEMPLATE = 
             "Please provide a concise summary of the following document in 3-5 sentences. " +
             "Focus on the main topics, key information, and overall purpose of the document.\n\n" +
@@ -84,15 +91,15 @@ public class GeminiService {
 
             log.debug("Sending request to Gemini API: {}", config.getApi().getUrl());
 
-            // Call API
-            ResponseEntity<Map> response = restTemplate.exchange(
+            // Call API with typed response
+            ResponseEntity<GeminiApiResponse> response = restTemplate.exchange(
                     url,
                     HttpMethod.POST,
                     request,
-                    Map.class
+                    GeminiApiResponse.class
             );
 
-            // Extract summary from response
+            // Extract summary from typed response
             String summary = extractSummaryFromResponse(response.getBody());
             
             long processingTime = System.currentTimeMillis() - startTime;
@@ -128,50 +135,25 @@ public class GeminiService {
                 "generationConfig", Map.of(
                         "temperature", config.getTemperature(),
                         "maxOutputTokens", config.getMaxTokens(),
-                        "topP", 0.8,
-                        "topK", 40
+                        "topP", TOP_P,
+                        "topK", TOP_K
                 )
         );
     }
 
     /**
-     * Extracts the summary text from Gemini API response.
+     * Extracts the summary text from typed Gemini API response.
      */
-    @SuppressWarnings("unchecked")
-    private String extractSummaryFromResponse(Map<String, Object> responseBody) {
+    private String extractSummaryFromResponse(GeminiApiResponse response) {
+        if (response == null) {
+            throw new GenAIException("Empty response from Gemini API");
+        }
+        
         try {
-            if (responseBody == null) {
-                throw new GenAIException("Empty response from Gemini API");
-            }
-
-            List<Map<String, Object>> candidates = 
-                    (List<Map<String, Object>>) responseBody.get("candidates");
-            
-            if (candidates == null || candidates.isEmpty()) {
-                throw new GenAIException("No candidates in Gemini API response");
-            }
-
-            Map<String, Object> content = 
-                    (Map<String, Object>) candidates.get(0).get("content");
-            
-            List<Map<String, Object>> parts = 
-                    (List<Map<String, Object>>) content.get("parts");
-            
-            if (parts == null || parts.isEmpty()) {
-                throw new GenAIException("No text parts in Gemini API response");
-            }
-
-            String text = (String) parts.get(0).get("text");
-            
-            if (text == null || text.trim().isEmpty()) {
-                throw new GenAIException("Empty text in Gemini API response");
-            }
-
-            return text.trim();
-
-        } catch (ClassCastException | NullPointerException e) {
-            log.error("❌ Failed to parse Gemini API response", e);
-            throw new GenAIException("Invalid response format from Gemini API", e);
+            return response.extractText();
+        } catch (IllegalStateException e) {
+            log.error("❌ Failed to extract text from Gemini API response", e);
+            throw new GenAIException(e.getMessage(), e);
         }
     }
 

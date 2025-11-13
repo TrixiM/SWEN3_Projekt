@@ -13,7 +13,7 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * Service for processing OCR operations asynchronously.
- * Integrates with Tesseract OCR for real text extraction from documents.
+ * Uses Spring's @Async to handle document processing in background threads.
  */
 @Service
 public class OcrProcessingService {
@@ -28,45 +28,38 @@ public class OcrProcessingService {
     
     /**
      * Processes a document asynchronously for OCR using Tesseract.
-     * Downloads document from MinIO, performs OCR extraction, and returns results.
+     * Spring's @Async annotation automatically wraps this in a CompletableFuture.
      * 
      * @param document the document to process
      * @return a CompletableFuture containing the OCR result
      */
     @Async
-    public CompletableFuture<OcrResultDto> processDocument(DocumentResponse document) { //CompletableFuture represents a future result of an asynchronous computation
-        log.info("🔄 Starting real OCR processing for document: {} ('{}'')",           // - essentially a placeholder for a value that will be computed and
-                document.id(), document.title());                                      //available at some point in the future. It allows your application to
-                                                                                        // continue executing other tasks while waiting for long-running operations
-                                                                                        //to complete.
-
-
+    public CompletableFuture<OcrResultDto> processDocument(DocumentResponse document) {
+        log.info("🔄 Starting OCR processing for document: {} ('{}'')",
+                document.id(), document.title());
         
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                // Perform actual OCR processing
-                OcrResultDto ocrResult = unifiedOcrService.processDocument(document);
-                
-                if (ocrResult.isSuccess()) {
-                    log.info("✅ OCR processing completed successfully for document: {}", document.id());
-                } else {
-                    log.warn("⚠️ OCR processing failed for document: {} - {}", document.id(), ocrResult.errorMessage());
-                }
-                
-                return ocrResult;
-                
-            } catch (Exception e) {
-                log.error("❌ Unexpected error during OCR processing for document: {}", document.id(), e);
-                return OcrResultDto.failure(document.id(), document.title(), "Unexpected error: " + e.getMessage(), 0L);
-            }
-        }).whenComplete((result, throwable) -> {
-            if (throwable != null) {
-                log.error("❌ OCR processing failed for document: {}", document.id(), throwable);
+        try {
+            OcrResultDto ocrResult = unifiedOcrService.processDocument(document);
+            
+            if (ocrResult.isSuccess()) {
+                log.info("✅ OCR processing completed successfully for document: {}", document.id());
             } else {
-                log.info("✅ OCR processing completed for document: {} with status: {}", 
-                        document.id(), result.status());
+                log.warn("⚠️ OCR processing failed for document: {} - {}", 
+                        document.id(), ocrResult.errorMessage());
             }
-        });
+            
+            return CompletableFuture.completedFuture(ocrResult);
+            
+        } catch (Exception e) {
+            log.error("❌ Unexpected error during OCR processing for document: {}", document.id(), e);
+            OcrResultDto failureResult = OcrResultDto.failure(
+                    document.id(), 
+                    document.title(), 
+                    "Unexpected error: " + e.getMessage(), 
+                    0L
+            );
+            return CompletableFuture.completedFuture(failureResult);
+        }
     }
     
 }
