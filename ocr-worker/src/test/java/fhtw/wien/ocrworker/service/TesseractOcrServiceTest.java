@@ -1,6 +1,7 @@
 package fhtw.wien.ocrworker.service;
 
 import fhtw.wien.ocrworker.config.OcrConfig;
+import fhtw.wien.ocrworker.service.model.OcrResult;
 import net.sourceforge.tess4j.TesseractException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -91,13 +92,13 @@ class TesseractOcrServiceTest {
     @Test
     void ocrResult_ShouldContainRequiredFields() {
         // Test OCR result structure
-        TesseractOcrService.OcrResult result = new TesseractOcrService.OcrResult(
+        OcrResult result = new OcrResult(
                 "Sample text", 85, "eng", 1500, true);
         
-        assertEquals("Sample text", result.getText());
-        assertEquals(85, result.getConfidence());
-        assertEquals("eng", result.getLanguage());
-        assertEquals(1500, result.getProcessingTimeMs());
+        assertEquals("Sample text", result.text());
+        assertEquals(85, result.confidence());
+        assertEquals("eng", result.language());
+        assertEquals(1500, result.processingTimeMs());
         assertTrue(result.isHighConfidence());
         
         // Test toString method
