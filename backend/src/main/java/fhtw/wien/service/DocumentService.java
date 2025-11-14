@@ -6,6 +6,7 @@ import fhtw.wien.domain.Document;
 import fhtw.wien.dto.DocumentResponse;
 import fhtw.wien.exception.ServiceException;
 import fhtw.wien.messaging.DocumentMessageProducer;
+import fhtw.wien.util.DocumentMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -37,7 +38,7 @@ public class DocumentService {
             log.info("Document created with ID: {}", created.getId());
             
             // Publish message after document is created
-            DocumentResponse response = toDocumentResponse(created);
+            DocumentResponse response = DocumentMapper.toResponse(created);
             messageProducer.publishDocumentCreated(response);
             
             return created;
@@ -54,7 +55,7 @@ public class DocumentService {
             log.info("Document updated with ID: {}", updated.getId());
             
             // Publish message after document is updated
-            DocumentResponse response = toDocumentResponse(updated);
+            DocumentResponse response = DocumentMapper.toResponse(updated);
             
             return updated;
         } catch (Exception e) {
@@ -99,24 +100,6 @@ public class DocumentService {
         }
     }
 
-    private DocumentResponse toDocumentResponse(Document d) {
-        return new DocumentResponse(
-                d.getId(),
-                d.getTitle(),
-                d.getOriginalFilename(),
-                d.getContentType(),
-                d.getSizeBytes(),
-                d.getBucket(),
-                d.getObjectKey(),
-                d.getStorageUri(),
-                d.getChecksumSha256(),
-                d.getStatus(),
-                d.getTags(),
-                d.getVersion(),
-                d.getCreatedAt(),
-                d.getUpdatedAt()
-        );
-    }
 
     public byte[] renderPdfPage(UUID id, int pageNumber, float scale) {
         log.info("Rendering page {} of document {} with scale {}", pageNumber, id, scale);
@@ -141,6 +124,26 @@ public class DocumentService {
         } catch (Exception e) {
             log.error("Failed to get page count for document {}", id, e);
             throw e; // Re-throw to preserve original exception type
+        }
+    }
+    
+    /**
+     * Retrieves document content (PDF data) from storage.
+     *
+     * @param document the document entity
+     * @return the PDF content as byte array
+     * @throws ServiceException if content retrieval fails
+     */
+    public byte[] getDocumentContent(Document document) {
+        log.debug("Retrieving content for document {}", document.getId());
+        try {
+            byte[] content = documentBusinessLogic.getDocumentContent(document);
+            log.debug("Retrieved content for document {}, size: {} bytes", 
+                    document.getId(), content.length);
+            return content;
+        } catch (Exception e) {
+            log.error("Failed to retrieve content for document {}", document.getId(), e);
+            throw new ServiceException("Failed to retrieve document content", e);
         }
     }
 }

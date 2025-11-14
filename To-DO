@@ -1,0 +1,48 @@
+1️⃣ Is doc.setPdfData(file.getBytes()) Needed?
+C:\Nextcloud\FH\SEM-5\SWEN-3\backend\src\main\java\fhtw\wien\controller\DocumentController.java
+Answer: YES, Absolutely Needed!
+java
+Why?
+
+1. Controller receives: MultipartFile (Spring abstraction)
+2. Business logic needs: byte[] (raw binary data)
+3. MinIO needs: byte[] to upload
+
+The Flow:
+Without this line, the Document entity would have no PDF data to upload to MinIO!
+
+Memory Consideration:
+java
+This is safe because:
+•  ✅ File held in memory briefly (~100ms)
+•  ✅ Cleared after MinIO upload
+•  ✅ NOT stored in PostgreSQL (stays null)
+
+
+4️⃣ Does Jackson Serialize Document Entity Automatically?
+java
+Question: Why not pass Document entity directly?
+
+Let's check what Jackson would do:
+
+❌ BAD: Passing Entity
+java
+What Jackson serializes:
+json
+Issues:
+1. ❌ JPA/Hibernate proxies leak into JSON
+2. ❌ Lazy-loaded collections can cause LazyInitializationException
+3. ❌ Exposes internal ORM state
+4. ❌ Couples messaging to database structure
+5. ❌ Security: might expose fields you don't want
+
+✅ GOOD: Passing DTO
+java
+What Jackson serializes:
+json
+Benefits:
+1. ✅ Clean JSON (no JPA noise)
+2. ✅ Explicit control over what's sent
+3. ✅ Decouples messaging from database schema
+4. ✅ Security: only expose what you want
+5. ✅ Immutable (Java record)
