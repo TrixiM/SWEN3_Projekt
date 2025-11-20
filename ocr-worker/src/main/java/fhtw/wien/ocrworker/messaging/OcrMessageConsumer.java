@@ -66,6 +66,7 @@ public class OcrMessageConsumer {
                     RabbitMQConfig.OCR_COMPLETED_ROUTING_KEY,
                     ocrResult
             );
+            log.info("📤 Sent OCR result to GenAI: id={}, status={}", ocrResult.documentId(), ocrResult.status());
         } catch (Exception e) {
             log.error("❌ Failed to send OCR result: {}", ocrResult.documentId(), e);
         }

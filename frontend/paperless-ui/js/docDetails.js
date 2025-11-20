@@ -27,6 +27,38 @@ document.addEventListener("DOMContentLoaded", () => {
 
     fillFields();
 
+    // Auto-refresh document data to check for summary updates
+    let refreshInterval;
+    async function refreshDocumentData() {
+        try {
+            const updated = await apiRequest(API_CONFIG.ENDPOINTS.DOCUMENT_BY_ID(doc.id));
+            
+            // Only update if summary has changed and we're not in edit mode
+            if (updated.summary && updated.summary !== doc.summary) {
+                const summaryField = document.getElementById("summary");
+                if (summaryField && summaryField.readOnly) {
+                    doc.summary = updated.summary;
+                    summaryField.value = updated.summary;
+                    console.log('✅ Summary updated:', updated.summary.substring(0, 100) + '...');
+                    
+                    // Stop refreshing once we have a summary
+                    if (refreshInterval) {
+                        clearInterval(refreshInterval);
+                        refreshInterval = null;
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Failed to refresh document data:', error);
+        }
+    }
+    
+    // Only auto-refresh if no summary exists yet
+    if (!doc.summary || doc.summary === "No summary available.") {
+        refreshInterval = setInterval(refreshDocumentData, 5000); // Check every 5 seconds
+        console.log('🔄 Auto-refresh enabled - checking for summary updates...');
+    }
+
     // Make fields read-only initially
     fields.forEach(id => {
         const el = document.getElementById(id);
