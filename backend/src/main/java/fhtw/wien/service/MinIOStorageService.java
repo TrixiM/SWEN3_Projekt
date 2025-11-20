@@ -11,7 +11,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.InvalidKeyException;
@@ -57,19 +56,30 @@ public class MinIOStorageService {
         }
     }
 
+    /**
+     * Uploads a document to MinIO using streaming.
+     * Accepts InputStream directly to avoid loading entire file into memory.
+     *
+     * @param documentId the document UUID
+     * @param filename the original filename
+     * @param contentType the MIME type
+     * @param inputStream the file content as stream
+     * @param size the file size in bytes
+     * @return the generated MinIO object key
+     */
     @CircuitBreaker(name = "minioService")
     @Retry(name = "minioService")
-    public String uploadDocument(UUID documentId, String filename, String contentType, byte[] data) {
+    public String uploadDocument(UUID documentId, String filename, String contentType, InputStream inputStream, long size) {
         String objectKey = generateObjectKey(documentId, filename);
         
-        try (InputStream inputStream = new ByteArrayInputStream(data)) {
+        try {
             log.info("Uploading document to MinIO: bucket={}, key={}, size={} bytes", 
-                    bucketName, objectKey, data.length);
+                    bucketName, objectKey, size);
             
             PutObjectArgs putObjectArgs = PutObjectArgs.builder()
                     .bucket(bucketName)
                     .object(objectKey)
-                    .stream(inputStream, data.length, -1)
+                    .stream(inputStream, size, -1) // -1 means unknown part size (stream all)
                     .contentType(contentType)
                     .build();
             

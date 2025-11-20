@@ -16,7 +16,7 @@ public class IdempotencyService {
     private static final Logger log = LoggerFactory.getLogger(IdempotencyService.class);
     private final Map<String, Instant> processedMessages = new ConcurrentHashMap<>();
     private static final long TTL_HOURS = 24;
-    
+
     public boolean tryMarkAsProcessed(String messageId) {
         cleanupExpiredEntries();
         
@@ -28,6 +28,25 @@ public class IdempotencyService {
         }
         
         log.debug("✅ Message can be processed: {}", messageId);
+        return true;
+    }
+    
+
+    public boolean isAlreadyProcessed(String messageId) {
+        cleanupExpiredEntries();
+        return processedMessages.containsKey(messageId);
+    }
+    
+
+    public boolean markAsProcessed(String messageId) {
+        Instant previousValue = processedMessages.putIfAbsent(messageId, Instant.now());
+        
+        if (previousValue != null) {
+            log.warn("⚠️ Message was already marked as processed: {}", messageId);
+            return false;
+        }
+        
+        log.debug("✅ Message marked as processed: {}", messageId);
         return true;
     }
     

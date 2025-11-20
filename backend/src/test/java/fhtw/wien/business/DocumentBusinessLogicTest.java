@@ -14,6 +14,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -47,11 +49,7 @@ class DocumentBusinessLogicTest {
                 "Test Document",
                 "test.pdf",
                 "application/pdf",
-                testPdfData.length,
-                "test-bucket",
-                "object-key",
-                "s3://test-bucket/object-key",
-                "checksum123"
+                testPdfData.length
         );
     }
 
@@ -60,43 +58,47 @@ class DocumentBusinessLogicTest {
     @Test
     void createOrUpdateDocument_WithNewDocument_ShouldUploadToMinioAndSave() {
         String expectedObjectKey = "documents/2024/01/01/" + testId + "-test.pdf";
+        InputStream pdfStream = new ByteArrayInputStream(testPdfData);
         
-        when(minioStorageService.uploadDocument(any(UUID.class), anyString(), anyString(), any(byte[].class)))
+        when(minioStorageService.uploadDocument(any(UUID.class), anyString(), anyString(), any(InputStream.class), anyLong()))
                 .thenReturn(expectedObjectKey);
         when(minioStorageService.getBucketName()).thenReturn("test-bucket");
         when(repository.save(any(Document.class))).thenReturn(testDocument);
 
-        Document result = businessLogic.createOrUpdateDocument(testDocument, testPdfData);
+        Document result = businessLogic.createOrUpdateDocument(testDocument, pdfStream);
 
         assertNotNull(result);
-        verify(minioStorageService).uploadDocument(any(UUID.class), eq("test.pdf"), eq("application/pdf"), eq(testPdfData));
+        verify(minioStorageService).uploadDocument(any(UUID.class), eq("test.pdf"), eq("application/pdf"), any(InputStream.class), eq((long) testPdfData.length));
         verify(repository).save(any(Document.class));
     }
 
     @Test
     void createOrUpdateDocument_WhenMinioUploadFails_ShouldThrowDataAccessException() {
-        when(minioStorageService.uploadDocument(any(UUID.class), anyString(), anyString(), any(byte[].class)))
+        InputStream pdfStream = new ByteArrayInputStream(testPdfData);
+        
+        when(minioStorageService.uploadDocument(any(UUID.class), anyString(), anyString(), any(InputStream.class), anyLong()))
                 .thenThrow(new RuntimeException("MinIO upload failed"));
 
         assertThrows(DataAccessException.class, () -> 
-            businessLogic.createOrUpdateDocument(testDocument, testPdfData)
+            businessLogic.createOrUpdateDocument(testDocument, pdfStream)
         );
 
-        verify(minioStorageService).uploadDocument(any(UUID.class), anyString(), anyString(), any(byte[].class));
+        verify(minioStorageService).uploadDocument(any(UUID.class), anyString(), anyString(), any(InputStream.class), anyLong());
         verify(repository, never()).save(any(Document.class));
     }
 
     @Test
     void createOrUpdateDocument_WhenDatabaseSaveFails_ShouldCleanupMinioAndThrowException() {
         String objectKey = "test-object-key";
+        InputStream pdfStream = new ByteArrayInputStream(testPdfData);
         
-        when(minioStorageService.uploadDocument(any(UUID.class), anyString(), anyString(), any(byte[].class)))
+        when(minioStorageService.uploadDocument(any(UUID.class), anyString(), anyString(), any(InputStream.class), anyLong()))
                 .thenReturn(objectKey);
         when(minioStorageService.getBucketName()).thenReturn("test-bucket");
         when(repository.save(any(Document.class))).thenThrow(new RuntimeException("Database error"));
 
         assertThrows(DataAccessException.class, () -> 
-            businessLogic.createOrUpdateDocument(testDocument, testPdfData)
+            businessLogic.createOrUpdateDocument(testDocument, pdfStream)
         );
 
         verify(minioStorageService).deleteDocument(objectKey);
@@ -106,53 +108,60 @@ class DocumentBusinessLogicTest {
 
     @Test
     void createOrUpdateDocument_WithNullDocument_ShouldThrowInvalidRequestException() {
+        InputStream pdfStream = new ByteArrayInputStream(testPdfData);
+        
         assertThrows(InvalidRequestException.class, () -> 
-            businessLogic.createOrUpdateDocument(null, testPdfData)
+            businessLogic.createOrUpdateDocument(null, pdfStream)
         );
     }
 
     @Test
     void createOrUpdateDocument_WithEmptyTitle_ShouldThrowInvalidRequestException() {
         testDocument.setTitle("");
+        InputStream pdfStream = new ByteArrayInputStream(testPdfData);
 
         assertThrows(InvalidRequestException.class, () -> 
-            businessLogic.createOrUpdateDocument(testDocument, testPdfData)
+            businessLogic.createOrUpdateDocument(testDocument, pdfStream)
         );
     }
 
     @Test
     void createOrUpdateDocument_WithNullTitle_ShouldThrowInvalidRequestException() {
         testDocument.setTitle(null);
+        InputStream pdfStream = new ByteArrayInputStream(testPdfData);
 
         assertThrows(InvalidRequestException.class, () -> 
-            businessLogic.createOrUpdateDocument(testDocument, testPdfData)
+            businessLogic.createOrUpdateDocument(testDocument, pdfStream)
         );
     }
 
     @Test
     void createOrUpdateDocument_WithEmptyFilename_ShouldThrowInvalidRequestException() {
         testDocument.setOriginalFilename("");
+        InputStream pdfStream = new ByteArrayInputStream(testPdfData);
 
         assertThrows(InvalidRequestException.class, () -> 
-            businessLogic.createOrUpdateDocument(testDocument, testPdfData)
+            businessLogic.createOrUpdateDocument(testDocument, pdfStream)
         );
     }
 
     @Test
     void createOrUpdateDocument_WithZeroSize_ShouldThrowInvalidRequestException() {
         testDocument.setSizeBytes(0);
+        InputStream pdfStream = new ByteArrayInputStream(testPdfData);
 
         assertThrows(InvalidRequestException.class, () -> 
-            businessLogic.createOrUpdateDocument(testDocument, testPdfData)
+            businessLogic.createOrUpdateDocument(testDocument, pdfStream)
         );
     }
 
     @Test
     void createOrUpdateDocument_WithExcessiveSize_ShouldThrowInvalidRequestException() {
         testDocument.setSizeBytes(101 * 1024 * 1024); // 101 MB
+        InputStream pdfStream = new ByteArrayInputStream(testPdfData);
 
         assertThrows(InvalidRequestException.class, () -> 
-            businessLogic.createOrUpdateDocument(testDocument, testPdfData)
+            businessLogic.createOrUpdateDocument(testDocument, pdfStream)
         );
     }
 
@@ -193,8 +202,8 @@ class DocumentBusinessLogicTest {
 
     @Test
     void getAllDocuments_ShouldReturnListOfDocuments() {
-        Document doc1 = new Document("Doc 1", "file1.pdf", "application/pdf", 1024L, "bucket", "key1", "uri1", "checksum1");
-        Document doc2 = new Document("Doc 2", "file2.pdf", "application/pdf", 2048L, "bucket", "key2", "uri2", "checksum2");
+        Document doc1 = new Document("Doc 1", "file1.pdf", "application/pdf", 1024L);
+        Document doc2 = new Document("Doc 2", "file2.pdf", "application/pdf", 2048L);
         
         when(repository.findAll()).thenReturn(List.of(doc1, doc2));
 

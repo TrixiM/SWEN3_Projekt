@@ -85,27 +85,4 @@ public class Document {
         this.status = DocumentStatus.NEW;
         this.tags = new ArrayList<>();
     }
-
-
-    public Document(
-            String title,
-            String originalFilename,
-            String contentType,
-            long sizeBytes,
-            String bucket,
-            String objectKey,
-            String storageUri,
-            String checksumSha256
-    ) {
-        this.title = title;
-        this.originalFilename = originalFilename;
-        this.contentType = contentType;
-        this.sizeBytes = sizeBytes;
-        this.bucket = bucket;
-        this.objectKey = objectKey;
-        this.storageUri = storageUri;
-        this.checksumSha256 = checksumSha256;
-        this.status = DocumentStatus.NEW;
-        this.tags = new ArrayList<>();
-    }
 }

@@ -39,6 +39,7 @@ public class DocumentController {
             @RequestParam(value = "title", required = false) String title,
             @RequestParam(value = "tags", required = false) List<String> tags
     ) throws IOException {
+        // Note: Using InputStream instead of file.getBytes() to avoid loading entire PDF into memory
         final String originalFilename = StringUtils.cleanPath(file.getOriginalFilename() == null ? "" : file.getOriginalFilename());
         
         // Default title to filename if not provided
@@ -63,9 +64,8 @@ public class DocumentController {
             doc.setTags(tags);
         }
 
-        var saved = service.create(doc, file.getBytes());
+        var saved = service.create(doc, file.getInputStream());
         var body = DocumentMapper.toResponse(saved);
-        log.info("Document created successfully with ID: {}", saved.getId());
         return ResponseEntity.created(URI.create("/v1/documents/" + saved.getId())).body(body);
     }
 
@@ -100,30 +100,26 @@ public class DocumentController {
 
         Document updated = service.update(existing);
         DocumentResponse response = DocumentMapper.toResponse(updated);
-
-        log.info("Document updated successfully with ID: {}", updated.getId());
         return ResponseEntity.ok(response);
     }
 
 
     @GetMapping
     public List<DocumentResponse> getAll() {
-        log.info("GET /v1/documents - Retrieving all documents");
+        log.debug("GET /v1/documents - Retrieving all documents");
         // Controller only handles HTTP concerns: response mapping
         var documents = service.getAll().stream()
                 .map(DocumentMapper::toResponse)
                 .toList();
-        log.info("Retrieved {} documents", documents.size());
+        log.debug("Retrieved {} documents", documents.size());
         return documents;
     }
 
     @GetMapping("{id}")
     public DocumentResponse get(@PathVariable UUID id) {
-        log.info("GET /v1/documents/{} - Retrieving document", id);
+        log.debug("GET /v1/documents/{} - Retrieving document", id);
         // Controller only handles HTTP concerns: response mapping
-        var response = DocumentMapper.toResponse(service.get(id));
-        log.debug("Retrieved document: {}", id);
-        return response;
+        return DocumentMapper.toResponse(service.get(id));
     }
 
     @GetMapping("{id}/content")
@@ -179,11 +175,9 @@ public class DocumentController {
 
     @GetMapping("{id}/pages/count")
     public ResponseEntity<Integer> getPageCount(@PathVariable UUID id) {
-        log.info("GET /v1/documents/{}/pages/count - Getting page count", id);
+        log.debug("GET /v1/documents/{}/pages/count - Getting page count", id);
         // Controller only handles HTTP concerns: response wrapping
-        int pageCount = service.getPdfPageCount(id);
-        log.debug("Document {} has {} pages", id, pageCount);
-        return ResponseEntity.ok(pageCount);
+        return ResponseEntity.ok(service.getPdfPageCount(id));
     }
 
     @DeleteMapping("{id}")
@@ -192,7 +186,6 @@ public class DocumentController {
         log.info("DELETE /v1/documents/{} - Deleting document", id);
         // Controller only handles HTTP concerns: status code
         service.delete(id);
-        log.info("Document deleted successfully: {}", id);
     }
 
 }

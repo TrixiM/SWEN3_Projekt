@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.InputStream;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,24 +29,33 @@ public class DocumentBusinessLogic {
         this.minioStorageService = minioStorageService;
     }
 
+    /**
+     * Creates or updates a document. For new documents, uploads PDF to MinIO storage.
+     * Uses InputStream to stream data directly to MinIO without loading into memory.
+     *
+     * @param doc the document metadata
+     * @param pdfStream the PDF content as InputStream (null for updates without file changes)
+     * @return the saved document with storage metadata
+     */
     @Transactional
-    public Document createOrUpdateDocument(Document doc, byte[] pdfData) {
+    public Document createOrUpdateDocument(Document doc, InputStream pdfStream) {
         validateDocument(doc);
         
         try {
             // For new documents, upload to MinIO first
-            if (doc.getId() == null && pdfData != null && pdfData.length > 0) {
+            if (doc.getId() == null && pdfStream != null) {
                 log.debug("Uploading new document to MinIO storage");
                 
                 // Generate ID for new document
                 doc.setId(UUID.randomUUID());
                 
-                // Upload to MinIO and get object key
+                // Upload to MinIO and get object key (streaming directly without intermediate byte[])
                 String objectKey = minioStorageService.uploadDocument(
                     doc.getId(), 
                     doc.getOriginalFilename(), 
                     doc.getContentType(), 
-                    pdfData
+                    pdfStream,
+                    doc.getSizeBytes()
                 );
                 
                 // Update document with MinIO info

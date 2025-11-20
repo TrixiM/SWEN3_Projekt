@@ -11,9 +11,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.io.InputStream;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Service layer for document operations.
+ * <p>
+ * Responsibilities:
+ * <ul>
+ *   <li>Delegating business operations to DocumentBusinessLogic</li>
+ *   <li>Publishing RabbitMQ messages after successful operations</li>
+ *   <li>Exception translation and logging</li>
+ * </ul>
+ */
 @Service
 public class DocumentService {
 
@@ -31,15 +42,18 @@ public class DocumentService {
         this.messageProducer = messageProducer;
     }
 
-    public Document create(Document doc, byte[] pdfData) {
-        log.info("Creating document with title: {}", doc.getTitle());
+    /**
+     * Creates a new document by uploading PDF to MinIO and saving metadata to database.
+     * Uses InputStream to avoid loading entire PDF into memory.
+     */
+    public Document create(Document doc, InputStream pdfStream) {
         try {
-            Document created = documentBusinessLogic.createOrUpdateDocument(doc, pdfData);
-            log.info("Document created with ID: {}", created.getId());
+            Document created = documentBusinessLogic.createOrUpdateDocument(doc, pdfStream);
             
             // Publish message after document is created
             DocumentResponse response = DocumentMapper.toResponse(created);
             messageProducer.publishDocumentCreated(response);
+            log.info("Document created and message published: id={}, title={}", created.getId(), created.getTitle());
             
             return created;
         } catch (Exception e) {
@@ -49,13 +63,12 @@ public class DocumentService {
     }
 
     public Document update(Document doc) {
-        log.info("Updating document with ID: {}", doc.getId());
         try {
             Document updated = documentBusinessLogic.createOrUpdateDocument(doc, null);
-            log.info("Document updated with ID: {}", updated.getId());
             
             // Publish message after document is updated
             DocumentResponse response = DocumentMapper.toResponse(updated);
+            log.info("Document updated: id={}, title={}", updated.getId(), updated.getTitle());
             
             return updated;
         } catch (Exception e) {
@@ -87,13 +100,12 @@ public class DocumentService {
     }
 
     public void delete(UUID id) {
-        log.info("Deleting document with ID: {}", id);
         try {
             documentBusinessLogic.deleteDocument(id);
-            log.info("Document deleted with ID: {}", id);
             
             // Publish message after document is deleted
             messageProducer.publishDocumentDeleted(id);
+            log.info("Document deleted and message published: id={}", id);
         } catch (Exception e) {
             log.error("Failed to delete document with ID: {}", id, e);
             throw new ServiceException("Failed to delete document", e);

@@ -32,21 +32,21 @@ public class SummarizationService {
 
         long startTime = System.currentTimeMillis();
 
-        try {
-            // Validate OCR result
-            Optional<String> validationError = validateOcrResult(ocrMessage);
-            if (validationError.isPresent()) {
-                log.warn("⚠️ Validation failed: {}", validationError.get());
-                return CompletableFuture.completedFuture(
-                        SummaryResultMessage.failure(
-                                ocrMessage.documentId(),
-                                ocrMessage.documentTitle(),
-                                validationError.get(),
-                                System.currentTimeMillis() - startTime
-                        )
-                );
-            }
+        // Validate OCR result
+        Optional<String> validationError = validateOcrResult(ocrMessage);
+        if (validationError.isPresent()) {
+            log.warn("⚠️ Validation failed: {}", validationError.get());
+            return CompletableFuture.completedFuture(
+                    SummaryResultMessage.failure(
+                            ocrMessage.documentId(),
+                            ocrMessage.documentTitle(),
+                            validationError.get(),
+                            System.currentTimeMillis() - startTime
+                    )
+            );
+        }
 
+        try {
             // Generate summary (retry/circuit breaker handled by GeminiService)
             String summary = geminiService.generateSummary(ocrMessage.extractedText());
 

@@ -3,7 +3,9 @@ package fhtw.wien.genaiworker.service;
 import fhtw.wien.genaiworker.config.GenAIConfig;
 import fhtw.wien.genaiworker.dto.GeminiResponse;
 import fhtw.wien.genaiworker.exception.GenAIException;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.github.resilience4j.retry.annotation.Retry;
 import org.slf4j.Logger;
@@ -42,7 +44,7 @@ public class GeminiService {
                 .build();
     }
 
-    @CircuitBreaker(name = "geminiService")
+    @CircuitBreaker(name = "geminiService", fallbackMethod = "generateSummaryFallback")
     @Retry(name = "geminiService")
     @RateLimiter(name = "geminiService")
     public String generateSummary(String text) {
@@ -142,6 +144,26 @@ public class GeminiService {
         }
     }
 
+    private String generateSummaryFallback(String text, Exception e) {
+        log.warn("⚠️ Gemini API fallback triggered: {}", e.getClass().getSimpleName());
+        
+        // Circuit breaker is open - service is temporarily unavailable
+        if (e instanceof CallNotPermittedException) {
+            log.error("❌ Circuit breaker OPEN: Too many recent failures, service temporarily unavailable");
+            throw new GenAIException("GenAI service temporarily unavailable due to repeated failures. Please try again in 30 seconds.");
+        }
+        
+        // Rate limiter rejected request - too many requests
+        if (e instanceof RequestNotPermitted) {
+            log.error("❌ Rate limiter REJECTED: Request quota exceeded");
+            throw new GenAIException("Rate limit exceeded. Too many summarization requests. Please try again later.");
+        }
+        
+        // Other errors - propagate with context
+        log.error("❌ Fallback for unexpected error: {}", e.getMessage());
+        throw new GenAIException("Failed to generate summary: " + e.getMessage(), e);
+    }
+    
     public boolean isConfigured() {
         return config.getApi().getKey() != null && 
                !config.getApi().getKey().isEmpty() &&

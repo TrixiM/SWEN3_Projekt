@@ -34,8 +34,8 @@ public class GenAIMessageConsumer {
     public void handleOcrCompleted(OcrResultDto message) {
         log.info("📨 Received OCR result for document: {} ('{}')", message.documentId(), message.documentTitle());
         
-        // Idempotency check using unique messageId
-        if (!idempotencyService.tryMarkAsProcessed(message.messageId())) {
+        // Check if already processed (but don't mark yet - do that after success)
+        if (idempotencyService.isAlreadyProcessed(message.messageId())) {
             log.info("⏭️ Skipping duplicate message: {}", message.messageId());
             return;
         }
@@ -46,6 +46,7 @@ public class GenAIMessageConsumer {
                     .whenComplete((result, throwable) -> {
                         if (throwable != null) {
                             log.error("❌ Summarization failed: {}", message.documentId(), throwable);
+                            // Don't mark as processed on failure - allow retry
                             sendSummaryResult(SummaryResultMessage.failure(
                                     message.documentId(),
                                     message.documentTitle(),
@@ -53,6 +54,8 @@ public class GenAIMessageConsumer {
                                     0L
                             ));
                         } else {
+                            // Mark as processed only after successful completion
+                            idempotencyService.markAsProcessed(message.messageId());
                             sendSummaryResult(result);
                         }
                     });
