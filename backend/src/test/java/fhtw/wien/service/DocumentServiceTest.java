@@ -49,16 +49,19 @@ class DocumentServiceTest {
 //    }
 
     @Test
-    void create_shouldSaveDocument() {
+    void create_shouldSaveDocument() throws Exception {
         Document doc = new Document(
-                "Test Title", "file.txt", "text/plain", 123L,
-                "test-bucket", "object-key", "s3://test-bucket/object-key", "abc123"
+                "Test Title", "file.txt", "text/plain", 123L
         );
+        doc.setBucket("test-bucket");
+        doc.setObjectKey("object-key");
+        doc.setStorageUri("s3://test-bucket/object-key");
+        doc.setChecksumSha256("abc123");
         byte[] pdfData = new byte[]{0x25, 0x50, 0x44, 0x46}; // Mock PDF data
         when(repo.save(doc)).thenReturn(doc);
-        when(minioStorageService.uploadDocument(any(), any(), any(), any())).thenReturn("object-key");
+        when(minioStorageService.uploadDocument(any(), any(), any(), any(), anyLong())).thenReturn("object-key");
 
-        Document result = service.create(doc, pdfData);
+        Document result = service.create(doc, new java.io.ByteArrayInputStream(pdfData));
 
         assertEquals(doc, result);
         verify(repo).save(doc);
@@ -68,9 +71,12 @@ class DocumentServiceTest {
     void get_shouldReturnDocument() {
         UUID id = UUID.randomUUID();
         Document doc = new Document(
-                "Test Title", "file.txt", "text/plain", 123L,
-                "test-bucket", "object-key", "s3://test-bucket/object-key", "abc123"
+                "Test Title", "file.txt", "text/plain", 123L
         );
+        doc.setBucket("test-bucket");
+        doc.setObjectKey("object-key");
+        doc.setStorageUri("s3://test-bucket/object-key");
+        doc.setChecksumSha256("abc123");
         // Set the ID if your Document class allows it, or use a constructor that sets it
         // e.g., doc.setId(id);
         when(repo.findById(id)).thenReturn(Optional.of(doc));

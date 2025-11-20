@@ -29,13 +29,13 @@ class DocumentMapperTest {
                 "Test Document",
                 "test.pdf",
                 "application/pdf",
-                1024L,
-                "test-bucket",
-                "test-object-key",
-                "s3://test-bucket/test-object-key",
-                "checksum123456"
+                1024L
         );
         testDocument.setId(testId);
+        testDocument.setBucket("test-bucket");
+        testDocument.setObjectKey("test-object-key");
+        testDocument.setStorageUri("s3://test-bucket/test-object-key");
+        testDocument.setChecksumSha256("checksum123456");
         testDocument.setStatus(DocumentStatus.UPLOADED);
         testDocument.setTags(List.of("tag1", "tag2", "tag3"));
         testDocument.setVersion(1);
@@ -81,13 +81,12 @@ class DocumentMapperTest {
                 "Minimal Doc",
                 "minimal.pdf",
                 "application/pdf",
-                512L,
-                "bucket",
-                "key",
-                "uri",
-                null
+                512L
         );
         minimal.setId(testId);
+        minimal.setBucket("bucket");
+        minimal.setObjectKey("key");
+        minimal.setStorageUri("uri");
 
         DocumentResponse response = DocumentMapper.toResponse(minimal);
 

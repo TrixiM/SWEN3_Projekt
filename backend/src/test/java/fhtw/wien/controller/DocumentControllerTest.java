@@ -50,13 +50,13 @@ class DocumentControllerTest {
                 "Test Document",
                 "test.pdf",
                 "application/pdf",
-                1024L,
-                "test-bucket",
-                "object-key",
-                "s3://test-bucket/object-key",
-                "checksum123"
+                1024L
         );
         testDocument.setId(testId);
+        testDocument.setBucket("test-bucket");
+        testDocument.setObjectKey("object-key");
+        testDocument.setStorageUri("s3://test-bucket/object-key");
+        testDocument.setChecksumSha256("checksum123");
         testDocument.setStatus(DocumentStatus.UPLOADED);
 
         testDocumentResponse = new DocumentResponse(
@@ -87,7 +87,7 @@ class DocumentControllerTest {
                 "PDF content".getBytes()
         );
 
-        when(documentService.create(any(Document.class), any(byte[].class))).thenReturn(testDocument);
+        when(documentService.create(any(Document.class), any())).thenReturn(testDocument);
 
         mockMvc.perform(multipart("/v1/documents")
                         .file(file)
@@ -99,7 +99,7 @@ class DocumentControllerTest {
                 .andExpect(jsonPath("$.title").value("Test Document"))
                 .andExpect(jsonPath("$.originalFilename").value("test.pdf"));
 
-        verify(documentService, times(1)).create(any(Document.class), any(byte[].class));
+        verify(documentService, times(1)).create(any(Document.class), any());
     }
 
     @Test
@@ -116,7 +116,7 @@ class DocumentControllerTest {
                         .param("title", "Test Document"))
                 .andExpect(status().isBadRequest());
 
-        verify(documentService, never()).create(any(Document.class), any(byte[].class));
+        verify(documentService, never()).create(any(Document.class), any());
     }
 
     @Test
@@ -128,13 +128,13 @@ class DocumentControllerTest {
                 "PDF content".getBytes()
         );
 
-        when(documentService.create(any(Document.class), any(byte[].class))).thenReturn(testDocument);
+        when(documentService.create(any(Document.class), any())).thenReturn(testDocument);
 
         mockMvc.perform(multipart("/v1/documents")
                         .file(file))
                 .andExpect(status().isCreated());
 
-        verify(documentService, times(1)).create(any(Document.class), any(byte[].class));
+        verify(documentService, times(1)).create(any(Document.class), any());
     }
 
     @Test
@@ -259,12 +259,12 @@ class DocumentControllerTest {
                 "Updated Title",
                 "test.pdf",
                 "application/pdf",
-                1024L,
-                "test-bucket",
-                "object-key",
-                "s3://test-bucket/object-key",
-                "checksum123"
+                1024L
         );
+        updateRequest.setBucket("test-bucket");
+        updateRequest.setObjectKey("object-key");
+        updateRequest.setStorageUri("s3://test-bucket/object-key");
+        updateRequest.setChecksumSha256("checksum123");
 
         when(documentService.get(testId)).thenReturn(testDocument);
         when(documentService.update(any(Document.class))).thenReturn(testDocument);
