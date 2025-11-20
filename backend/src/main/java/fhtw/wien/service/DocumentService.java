@@ -31,10 +31,10 @@ public class DocumentService {
         this.messageProducer = messageProducer;
     }
 
-    public Document create(Document doc) {
+    public Document create(Document doc, byte[] pdfData) {
         log.info("Creating document with title: {}", doc.getTitle());
         try {
-            Document created = documentBusinessLogic.createOrUpdateDocument(doc);
+            Document created = documentBusinessLogic.createOrUpdateDocument(doc, pdfData);
             log.info("Document created with ID: {}", created.getId());
             
             // Publish message after document is created
@@ -51,7 +51,7 @@ public class DocumentService {
     public Document update(Document doc) {
         log.info("Updating document with ID: {}", doc.getId());
         try {
-            Document updated = documentBusinessLogic.createOrUpdateDocument(doc);
+            Document updated = documentBusinessLogic.createOrUpdateDocument(doc, null);
             log.info("Document updated with ID: {}", updated.getId());
             
             // Publish message after document is updated

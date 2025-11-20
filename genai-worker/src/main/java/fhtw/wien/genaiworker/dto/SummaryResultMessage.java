@@ -8,6 +8,7 @@ import java.util.UUID;
  * Contains the generated summary and processing metadata.
  */
 public record SummaryResultMessage(
+        String messageId,
         UUID documentId,
         String title,
         String summary,
@@ -22,6 +23,7 @@ public record SummaryResultMessage(
      */
     public static SummaryResultMessage success(UUID documentId, String title, String summary, long processingTimeMs) {
         return new SummaryResultMessage(
+                UUID.randomUUID().toString(),
                 documentId,
                 title,
                 summary,
@@ -37,6 +39,7 @@ public record SummaryResultMessage(
      */
     public static SummaryResultMessage failure(UUID documentId, String title, String errorMessage, long processingTimeMs) {
         return new SummaryResultMessage(
+                UUID.randomUUID().toString(),
                 documentId,
                 title,
                 null,

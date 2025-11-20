@@ -64,10 +64,9 @@ public class DocumentMessageConsumer {
     public void handleSummaryResult(SummaryResultDto summaryResult) {
         log.info("📨 BACKEND RECEIVED: Summary result for document ID: {}", summaryResult.documentId());
         
-        // Idempotency check - use documentId as unique message identifier
-        String messageId = "summary-" + summaryResult.documentId();
-        if (!idempotencyService.tryMarkAsProcessed(messageId)) {
-            log.info("⏭️ Skipping duplicate summary result for document: {}", summaryResult.documentId());
+        // Idempotency check using unique messageId
+        if (!idempotencyService.tryMarkAsProcessed(summaryResult.messageId())) {
+            log.info("⏭️ Skipping duplicate summary result message: {}", summaryResult.messageId());
             return;
         }
 

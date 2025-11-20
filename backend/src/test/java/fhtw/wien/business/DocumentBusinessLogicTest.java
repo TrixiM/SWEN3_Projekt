@@ -53,7 +53,6 @@ class DocumentBusinessLogicTest {
                 "s3://test-bucket/object-key",
                 "checksum123"
         );
-        testDocument.setPdfData(testPdfData);
     }
 
     // CREATE TESTS
@@ -67,7 +66,7 @@ class DocumentBusinessLogicTest {
         when(minioStorageService.getBucketName()).thenReturn("test-bucket");
         when(repository.save(any(Document.class))).thenReturn(testDocument);
 
-        Document result = businessLogic.createOrUpdateDocument(testDocument);
+        Document result = businessLogic.createOrUpdateDocument(testDocument, testPdfData);
 
         assertNotNull(result);
         verify(minioStorageService).uploadDocument(any(UUID.class), eq("test.pdf"), eq("application/pdf"), eq(testPdfData));
@@ -80,7 +79,7 @@ class DocumentBusinessLogicTest {
                 .thenThrow(new RuntimeException("MinIO upload failed"));
 
         assertThrows(DataAccessException.class, () -> 
-            businessLogic.createOrUpdateDocument(testDocument)
+            businessLogic.createOrUpdateDocument(testDocument, testPdfData)
         );
 
         verify(minioStorageService).uploadDocument(any(UUID.class), anyString(), anyString(), any(byte[].class));
@@ -97,7 +96,7 @@ class DocumentBusinessLogicTest {
         when(repository.save(any(Document.class))).thenThrow(new RuntimeException("Database error"));
 
         assertThrows(DataAccessException.class, () -> 
-            businessLogic.createOrUpdateDocument(testDocument)
+            businessLogic.createOrUpdateDocument(testDocument, testPdfData)
         );
 
         verify(minioStorageService).deleteDocument(objectKey);
@@ -108,7 +107,7 @@ class DocumentBusinessLogicTest {
     @Test
     void createOrUpdateDocument_WithNullDocument_ShouldThrowInvalidRequestException() {
         assertThrows(InvalidRequestException.class, () -> 
-            businessLogic.createOrUpdateDocument(null)
+            businessLogic.createOrUpdateDocument(null, testPdfData)
         );
     }
 
@@ -117,7 +116,7 @@ class DocumentBusinessLogicTest {
         testDocument.setTitle("");
 
         assertThrows(InvalidRequestException.class, () -> 
-            businessLogic.createOrUpdateDocument(testDocument)
+            businessLogic.createOrUpdateDocument(testDocument, testPdfData)
         );
     }
 
@@ -126,7 +125,7 @@ class DocumentBusinessLogicTest {
         testDocument.setTitle(null);
 
         assertThrows(InvalidRequestException.class, () -> 
-            businessLogic.createOrUpdateDocument(testDocument)
+            businessLogic.createOrUpdateDocument(testDocument, testPdfData)
         );
     }
 
@@ -135,7 +134,7 @@ class DocumentBusinessLogicTest {
         testDocument.setOriginalFilename("");
 
         assertThrows(InvalidRequestException.class, () -> 
-            businessLogic.createOrUpdateDocument(testDocument)
+            businessLogic.createOrUpdateDocument(testDocument, testPdfData)
         );
     }
 
@@ -144,7 +143,7 @@ class DocumentBusinessLogicTest {
         testDocument.setSizeBytes(0);
 
         assertThrows(InvalidRequestException.class, () -> 
-            businessLogic.createOrUpdateDocument(testDocument)
+            businessLogic.createOrUpdateDocument(testDocument, testPdfData)
         );
     }
 
@@ -153,7 +152,7 @@ class DocumentBusinessLogicTest {
         testDocument.setSizeBytes(101 * 1024 * 1024); // 101 MB
 
         assertThrows(InvalidRequestException.class, () -> 
-            businessLogic.createOrUpdateDocument(testDocument)
+            businessLogic.createOrUpdateDocument(testDocument, testPdfData)
         );
     }
 

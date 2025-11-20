@@ -9,6 +9,7 @@ import java.util.UUID;
  * This matches the OcrResultDto from the OCR worker.
  */
 public record OcrResultDto(
+        String messageId,
         UUID documentId,
         String documentTitle,
         String extractedText,

@@ -130,11 +130,19 @@ async function filterDocuments() {
                 .map(result => {
                     // Find the full document from allDocuments by ID
                     const fullDoc = allDocuments.find(doc => doc.id === result.documentId);
-                    return fullDoc || null;
+                    if (!fullDoc) {
+                        console.warn(`Document ${result.documentId} found in search but not in document list`);
+                    }
+                    return fullDoc;
                 })
-                .filter(doc => doc !== null); // Remove any nulls
+                .filter(doc => doc !== null && doc !== undefined);
             
-            console.log(`\u2705 Found ${documentsToDisplay.length} documents in Elasticsearch`);
+            console.log(`\u2705 Elasticsearch found ${searchResults.length} results, ${documentsToDisplay.length} matched to documents`);
+            
+            // Hide search indicator
+            if (searchIndicator) {
+                searchIndicator.classList.add('hidden');
+            }
         } else {
             // No search term, use all documents
             documentsToDisplay = allDocuments;

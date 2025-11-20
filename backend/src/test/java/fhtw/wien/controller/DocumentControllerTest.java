@@ -1,7 +1,6 @@
 package fhtw.wien.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import fhtw.wien.config.StorageConfiguration;
 import fhtw.wien.domain.Document;
 import fhtw.wien.domain.DocumentStatus;
 import fhtw.wien.dto.DocumentResponse;
@@ -40,9 +39,6 @@ class DocumentControllerTest {
     @MockBean
     private DocumentService documentService;
 
-    @MockBean
-    private StorageConfiguration storageConfiguration;
-
     private Document testDocument;
     private DocumentResponse testDocumentResponse;
     private UUID testId;
@@ -80,10 +76,6 @@ class DocumentControllerTest {
                 Instant.now(),
                 Instant.now()
         );
-
-        when(storageConfiguration.getDefaultBucket()).thenReturn("test-bucket");
-        when(storageConfiguration.generateObjectKey(anyString())).thenReturn("object-key");
-        when(storageConfiguration.generateStorageUri(anyString())).thenReturn("s3://test-bucket/object-key");
     }
 
     @Test
@@ -95,7 +87,7 @@ class DocumentControllerTest {
                 "PDF content".getBytes()
         );
 
-        when(documentService.create(any(Document.class))).thenReturn(testDocument);
+        when(documentService.create(any(Document.class), any(byte[].class))).thenReturn(testDocument);
 
         mockMvc.perform(multipart("/v1/documents")
                         .file(file)
@@ -107,7 +99,7 @@ class DocumentControllerTest {
                 .andExpect(jsonPath("$.title").value("Test Document"))
                 .andExpect(jsonPath("$.originalFilename").value("test.pdf"));
 
-        verify(documentService, times(1)).create(any(Document.class));
+        verify(documentService, times(1)).create(any(Document.class), any(byte[].class));
     }
 
     @Test
@@ -124,11 +116,11 @@ class DocumentControllerTest {
                         .param("title", "Test Document"))
                 .andExpect(status().isBadRequest());
 
-        verify(documentService, never()).create(any(Document.class));
+        verify(documentService, never()).create(any(Document.class), any(byte[].class));
     }
 
     @Test
-    void create_WithEmptyTitle_ShouldReturnBadRequest() throws Exception {
+    void create_WithNoTitle_ShouldDefaultToFilename() throws Exception {
         MockMultipartFile file = new MockMultipartFile(
                 "file",
                 "test.pdf",
@@ -136,12 +128,13 @@ class DocumentControllerTest {
                 "PDF content".getBytes()
         );
 
-        mockMvc.perform(multipart("/v1/documents")
-                        .file(file)
-                        .param("title", ""))
-                .andExpect(status().isBadRequest());
+        when(documentService.create(any(Document.class), any(byte[].class))).thenReturn(testDocument);
 
-        verify(documentService, never()).create(any(Document.class));
+        mockMvc.perform(multipart("/v1/documents")
+                        .file(file))
+                .andExpect(status().isCreated());
+
+        verify(documentService, times(1)).create(any(Document.class), any(byte[].class));
     }
 
     @Test
@@ -186,7 +179,6 @@ class DocumentControllerTest {
     @Test
     void getContent_WithValidId_ShouldReturnPdfContent() throws Exception {
         byte[] pdfData = "PDF content".getBytes();
-        testDocument.setPdfData(pdfData);
 
         when(documentService.get(testId)).thenReturn(testDocument);
         when(documentService.getDocumentContent(testDocument)).thenReturn(pdfData);

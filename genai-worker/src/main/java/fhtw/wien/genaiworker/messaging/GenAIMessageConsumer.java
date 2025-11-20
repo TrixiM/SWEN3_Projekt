@@ -39,62 +39,39 @@ public class GenAIMessageConsumer {
      */
     @RabbitListener(queues = RabbitMQConfig.OCR_COMPLETED_QUEUE)
     public void handleOcrCompleted(OcrResultDto message) {
-        log.info("📨 GENAI WORKER RECEIVED: OCR completed for document: {} ('{}')",
-                message.documentId(), message.documentTitle());
+        log.info("📨 Received OCR result for document: {} ('{}')", message.documentId(), message.documentTitle());
         
-        // Idempotency check
-        String messageId = "genai-ocr-" + message.documentId();
-        if (!idempotencyService.tryMarkAsProcessed(messageId)) {
-            log.info("⏭️ Skipping duplicate OCR completion for document: {}", message.documentId());
+        // Idempotency check using unique messageId
+        if (!idempotencyService.tryMarkAsProcessed(message.messageId())) {
+            log.info("⏭️ Skipping duplicate message: {}", message.messageId());
             return;
         }
 
-        log.info("📋 OCR Details:");
-        log.info("   - Pages: {}", message.totalPages());
-        log.info("   - Characters: {}", message.totalCharacters());
-        log.info("   - Confidence: {}%", message.overallConfidence());
-        log.info("   - Status: {}", message.status());
-
         try {
             // Process summarization asynchronously
-            log.info("🔄 Triggering summarization process...");
-
             summarizationService.processSummarization(message)
                     .whenComplete((result, throwable) -> {
                         if (throwable != null) {
-                            log.error("❌ Summarization failed for document: {}", 
-                                    message.documentId(), throwable);
-
-                            // Send failure message
-                            SummaryResultMessage failureMessage = SummaryResultMessage.failure(
+                            log.error("❌ Summarization failed: {}", message.documentId(), throwable);
+                            sendSummaryResult(SummaryResultMessage.failure(
                                     message.documentId(),
                                     message.documentTitle(),
                                     "Summarization error: " + throwable.getMessage(),
                                     0L
-                            );
-                            sendSummaryResult(failureMessage);
-
+                            ));
                         } else {
-                            log.info("✅ Summarization completed for document: {} - Status: {}", 
-                                    message.documentId(), result.status());
-
-                            // Send result to backend
                             sendSummaryResult(result);
                         }
                     });
 
         } catch (Exception e) {
-            log.error("❌ Failed to process OCR completion message for document: {}", 
-                    message.documentId(), e);
-
-            // Send failure message
-            SummaryResultMessage failureMessage = SummaryResultMessage.failure(
+            log.error("❌ Failed to process message: {}", message.documentId(), e);
+            sendSummaryResult(SummaryResultMessage.failure(
                     message.documentId(),
                     message.documentTitle(),
                     "Processing error: " + e.getMessage(),
                     0L
-            );
-            sendSummaryResult(failureMessage);
+            ));
         }
     }
 
@@ -110,17 +87,9 @@ public class GenAIMessageConsumer {
                     RabbitMQConfig.SUMMARY_RESULT_ROUTING_KEY,
                     result
             );
-
-            if (result.isSuccess()) {
-                log.info("📤 Sent summary result to backend for document: {} (length: {} characters)",
-                        result.documentId(), result.summary().length());
-            } else {
-                log.warn("📤 Sent failure result to backend for document: {} - Error: {}",
-                        result.documentId(), result.errorMessage());
-            }
-
+            log.info("📤 Sent {} result for document: {}", result.status(), result.documentId());
         } catch (Exception e) {
-            log.error("❌ Failed to send summary result for document: {}", result.documentId(), e);
+            log.error("❌ Failed to send result: {}", result.documentId(), e);
         }
     }
 }

@@ -1,6 +1,7 @@
 package fhtw.wien.genaiworker.service;
 
 import fhtw.wien.genaiworker.config.GenAIConfig;
+import fhtw.wien.genaiworker.dto.GeminiResponse;
 import fhtw.wien.genaiworker.exception.GenAIException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
@@ -53,11 +54,11 @@ public class GeminiService {
      * @return the generated summary
      * @throws GenAIException if summarization fails
      */
-    @CircuitBreaker(name = "geminiService", fallbackMethod = "generateSummaryFallback")
+    @CircuitBreaker(name = "geminiService")
     @Retry(name = "geminiService")
     @RateLimiter(name = "geminiService")
     public String generateSummary(String text) {
-        log.info("🤖 Generating summary using Google Gemini API...");
+        log.debug("🤖 Calling Gemini API (input: {} chars)", text.length());
         long startTime = System.currentTimeMillis();
 
         try {
@@ -68,46 +69,44 @@ public class GeminiService {
 
             // Truncate text if too long
             String processedText = truncateText(text, MAX_INPUT_LENGTH);
-            log.debug("Input text length: {} characters (original: {})", 
-                    processedText.length(), text.length());
 
-            // Create prompt
+            // Create prompt and request
             String prompt = String.format(SUMMARY_PROMPT_TEMPLATE, processedText);
-
-            // Build request
             String url = config.getApi().getUrl() + "?key=" + config.getApi().getKey();
+            
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(buildRequestBody(prompt), headers);
 
-            Map<String, Object> requestBody = buildRequestBody(prompt);
-            HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
-
-            log.debug("Sending request to Gemini API: {}", config.getApi().getUrl());
-
-            // Call API
-            ResponseEntity<Map> response = restTemplate.exchange(
+            // Call API with type-safe response parsing
+            ResponseEntity<GeminiResponse> response = restTemplate.exchange(
                     url,
                     HttpMethod.POST,
                     request,
-                    Map.class
+                    GeminiResponse.class
             );
 
-            // Extract summary from response
-            String summary = extractSummaryFromResponse(response.getBody());
+            if (response.getBody() == null) {
+                throw new GenAIException("Empty response from Gemini API");
+            }
+
+            String summary = response.getBody().extractText();
             
             long processingTime = System.currentTimeMillis() - startTime;
-            log.info("✅ Summary generated successfully in {}ms (length: {} characters)", 
-                    processingTime, summary.length());
+            log.debug("✅ Gemini API returned summary in {}ms ({} chars)", processingTime, summary.length());
             
             return summary;
 
         } catch (HttpClientErrorException e) {
-            log.error("❌ Gemini API client error: {} - {}", e.getStatusCode(), e.getMessage());
-            throw new GenAIException("Gemini API request failed: " + e.getStatusCode(), e);
+            log.error("❌ Gemini API client error: {}", e.getStatusCode());
+            throw new GenAIException("Gemini API client error: " + e.getStatusCode(), e);
             
         } catch (HttpServerErrorException e) {
-            log.error("❌ Gemini API server error: {} - {}", e.getStatusCode(), e.getMessage());
+            log.error("❌ Gemini API server error: {}", e.getStatusCode());
             throw new GenAIException("Gemini API server error: " + e.getStatusCode(), e);
+            
+        } catch (GenAIException e) {
+            throw e; // Re-throw GenAIException as-is
             
         } catch (Exception e) {
             log.error("❌ Unexpected error calling Gemini API", e);
@@ -135,47 +134,6 @@ public class GeminiService {
     }
 
     /**
-     * Extracts the summary text from Gemini API response.
-     */
-    @SuppressWarnings("unchecked")
-    private String extractSummaryFromResponse(Map<String, Object> responseBody) {
-        try {
-            if (responseBody == null) {
-                throw new GenAIException("Empty response from Gemini API");
-            }
-
-            List<Map<String, Object>> candidates = 
-                    (List<Map<String, Object>>) responseBody.get("candidates");
-            
-            if (candidates == null || candidates.isEmpty()) {
-                throw new GenAIException("No candidates in Gemini API response");
-            }
-
-            Map<String, Object> content = 
-                    (Map<String, Object>) candidates.get(0).get("content");
-            
-            List<Map<String, Object>> parts = 
-                    (List<Map<String, Object>>) content.get("parts");
-            
-            if (parts == null || parts.isEmpty()) {
-                throw new GenAIException("No text parts in Gemini API response");
-            }
-
-            String text = (String) parts.get(0).get("text");
-            
-            if (text == null || text.trim().isEmpty()) {
-                throw new GenAIException("Empty text in Gemini API response");
-            }
-
-            return text.trim();
-
-        } catch (ClassCastException | NullPointerException e) {
-            log.error("❌ Failed to parse Gemini API response", e);
-            throw new GenAIException("Invalid response format from Gemini API", e);
-        }
-    }
-
-    /**
      * Truncates text to maximum length, trying to preserve sentence boundaries.
      */
     private String truncateText(String text, int maxLength) {
@@ -199,15 +157,6 @@ public class GeminiService {
             // No good break point, just truncate
             return truncated + "...";
         }
-    }
-
-    /**
-     * Fallback method for generateSummary when circuit is open or retries exhausted.
-     */
-    private String generateSummaryFallback(String text, Exception ex) {
-        log.warn("⚠️ Gemini API unavailable, using fallback. Reason: {}", ex.getMessage());
-        return "[Summary temporarily unavailable - Gemini API service is experiencing issues. " +
-               "This document contains " + text.length() + " characters and will be summarized once the service recovers.]";
     }
 
     /**

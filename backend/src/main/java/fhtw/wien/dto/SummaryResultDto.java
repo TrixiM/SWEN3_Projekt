@@ -7,6 +7,7 @@ import java.util.UUID;
  * DTO for receiving summary results from GenAI worker.
  */
 public record SummaryResultDto(
+        String messageId,
         UUID documentId,
         String title,
         String summary,

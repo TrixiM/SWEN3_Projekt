@@ -11,6 +11,7 @@ import java.util.UUID;
  * Contains extracted text, confidence scores, and processing metadata.
  */
 public record OcrResultDto(
+        String messageId,
         UUID documentId,
         String documentTitle,
         String extractedText,
@@ -61,6 +62,7 @@ public record OcrResultDto(
             long processingTimeMs) {
         
         return new OcrResultDto(
+                UUID.randomUUID().toString(),
                 documentId,
                 documentTitle,
                 extractedText,
@@ -93,6 +95,7 @@ public record OcrResultDto(
             long processingTimeMs) {
         
         return new OcrResultDto(
+                UUID.randomUUID().toString(),
                 documentId,
                 documentTitle,
                 null,

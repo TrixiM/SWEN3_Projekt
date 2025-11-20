@@ -10,7 +10,10 @@ import java.util.UUID;
 
 /**
  * Elasticsearch document entity for indexing OCR text content.
- * Allows full-text search across processed documents.
+ * This entity is used by the OCR worker to WRITE to Elasticsearch after processing.
+ * 
+ * Note: A similar class exists in backend for READING from Elasticsearch.
+ * Both must stay in sync regarding field mappings and index structure.
  */
 @Document(indexName = "documents")
 public class DocumentIndex {

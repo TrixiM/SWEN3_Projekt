@@ -29,12 +29,12 @@ public class DocumentBusinessLogic {
     }
 
     @Transactional
-    public Document createOrUpdateDocument(Document doc) {
+    public Document createOrUpdateDocument(Document doc, byte[] pdfData) {
         validateDocument(doc);
         
         try {
             // For new documents, upload to MinIO first
-            if (doc.getId() == null && doc.getPdfData() != null) {
+            if (doc.getId() == null && pdfData != null && pdfData.length > 0) {
                 log.debug("Uploading new document to MinIO storage");
                 
                 // Generate ID for new document
@@ -45,16 +45,13 @@ public class DocumentBusinessLogic {
                     doc.getId(), 
                     doc.getOriginalFilename(), 
                     doc.getContentType(), 
-                    doc.getPdfData()
+                    pdfData
                 );
                 
                 // Update document with MinIO info
                 doc.setBucket(minioStorageService.getBucketName());
                 doc.setObjectKey(objectKey);
                 doc.setStorageUri(String.format("minio://%s/%s", doc.getBucket(), objectKey));
-                
-                // Clear PDF data after upload (don't store in DB)
-                doc.setPdfData(null);
                 
                 log.debug("Document uploaded to MinIO: bucket={}, key={}", doc.getBucket(), objectKey);
             }

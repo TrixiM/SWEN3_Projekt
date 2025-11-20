@@ -41,8 +41,7 @@ public class DocumentSearchController {
         
         log.info("📥 Search request received for query: '{}'", q);
         
-        if (q == null || q.trim().isEmpty()) {
-            log.warn("⚠️ Empty search query received");
+        if (!isValidQuery(q)) {
             return ResponseEntity.badRequest().build();
         }
         
@@ -69,8 +68,7 @@ public class DocumentSearchController {
         
         log.info("📥 Title search request received for query: '{}'", q);
         
-        if (q == null || q.trim().isEmpty()) {
-            log.warn("⚠️ Empty title search query received");
+        if (!isValidQuery(q)) {
             return ResponseEntity.badRequest().build();
         }
         
@@ -97,8 +95,7 @@ public class DocumentSearchController {
         
         log.info("📥 Content search request received for query: '{}'", q);
         
-        if (q == null || q.trim().isEmpty()) {
-            log.warn("⚠️ Empty content search query received");
+        if (!isValidQuery(q)) {
             return ResponseEntity.badRequest().build();
         }
         
@@ -111,5 +108,46 @@ public class DocumentSearchController {
             log.error("❌ Content search failed for query '{}': {}", q, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+    
+    /**
+     * Fuzzy search documents (handles typos and misspellings).
+     */
+    @GetMapping("/fuzzy")
+    @Operation(summary = "Fuzzy search documents", 
+               description = "Fuzzy search documents in both title and content fields. Handles typos and misspellings. "
+                           + "Fuzziness values: 0 (exact), 1 (1 char difference), 2 (2 chars), AUTO (recommended)")
+    public ResponseEntity<List<DocumentSearchDto>> fuzzySearchDocuments(
+            @Parameter(description = "Search query string", required = true)
+            @RequestParam String q,
+            @Parameter(description = "Fuzziness level (0, 1, 2, or AUTO)", example = "AUTO")
+            @RequestParam(defaultValue = "AUTO") String fuzziness) {
+        
+        log.info("📥 Fuzzy search request received for query: '{}' with fuzziness: {}", q, fuzziness);
+        
+        if (!isValidQuery(q)) {
+            return ResponseEntity.badRequest().build();
+        }
+        
+        try {
+            List<DocumentSearchDto> results = searchService.fuzzySearch(q, fuzziness);
+            log.info("✅ Fuzzy search completed, found {} results", results.size());
+            return ResponseEntity.ok(results);
+            
+        } catch (Exception e) {
+            log.error("❌ Fuzzy search failed for query '{}': {}", q, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+    
+    /**
+     * Validates search query string.
+     */
+    private boolean isValidQuery(String query) {
+        if (query == null || query.trim().isEmpty()) {
+            log.warn("⚠️ Empty search query received");
+            return false;
+        }
+        return true;
     }
 }

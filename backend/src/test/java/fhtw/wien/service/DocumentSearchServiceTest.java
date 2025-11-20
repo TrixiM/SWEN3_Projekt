@@ -176,6 +176,93 @@ class DocumentSearchServiceTest {
         assertTrue(exception.getMessage().contains("Search failed"));
     }
     
+    @Test
+    void testFuzzySearch_Success() {
+        // Arrange
+        String query = "documnt"; // Intentional typo for "document"
+        String fuzziness = "AUTO";
+        UUID documentId = UUID.randomUUID();
+        
+        DocumentIndex doc = createDocumentIndex(documentId, "Test Document", 
+                "This document contains important information");
+        
+        when(searchHit.getContent()).thenReturn(doc);
+        when(searchHits.stream()).thenReturn(List.of(searchHit).stream());
+        when(elasticsearchOperations.search(any(Query.class), eq(DocumentIndex.class)))
+                .thenReturn(searchHits);
+        
+        // Act
+        List<DocumentSearchDto> results = service.fuzzySearch(query, fuzziness);
+        
+        // Assert
+        assertNotNull(results);
+        assertEquals(1, results.size());
+        assertEquals(documentId, results.get(0).documentId());
+        assertEquals("Test Document", results.get(0).title());
+        
+        verify(elasticsearchOperations).search(any(Query.class), eq(DocumentIndex.class));
+    }
+    
+    @Test
+    void testFuzzySearch_DefaultFuzziness() {
+        // Arrange
+        String query = "documnt";
+        UUID documentId = UUID.randomUUID();
+        
+        DocumentIndex doc = createDocumentIndex(documentId, "Test Document", "Content");
+        
+        when(searchHit.getContent()).thenReturn(doc);
+        when(searchHits.stream()).thenReturn(List.of(searchHit).stream());
+        when(elasticsearchOperations.search(any(Query.class), eq(DocumentIndex.class)))
+                .thenReturn(searchHits);
+        
+        // Act - Using default fuzziness
+        List<DocumentSearchDto> results = service.fuzzySearch(query);
+        
+        // Assert
+        assertNotNull(results);
+        assertEquals(1, results.size());
+        
+        verify(elasticsearchOperations).search(any(Query.class), eq(DocumentIndex.class));
+    }
+    
+    @Test
+    void testFuzzySearch_NoResults() {
+        // Arrange
+        String query = "xyzabc";
+        String fuzziness = "1";
+        
+        when(searchHits.stream()).thenReturn(List.<SearchHit<DocumentIndex>>of().stream());
+        when(elasticsearchOperations.search(any(Query.class), eq(DocumentIndex.class)))
+                .thenReturn(searchHits);
+        
+        // Act
+        List<DocumentSearchDto> results = service.fuzzySearch(query, fuzziness);
+        
+        // Assert
+        assertNotNull(results);
+        assertTrue(results.isEmpty());
+        
+        verify(elasticsearchOperations).search(any(Query.class), eq(DocumentIndex.class));
+    }
+    
+    @Test
+    void testFuzzySearch_Exception() {
+        // Arrange
+        String query = "test";
+        String fuzziness = "AUTO";
+        
+        when(elasticsearchOperations.search(any(Query.class), eq(DocumentIndex.class)))
+                .thenThrow(new RuntimeException("Fuzzy search error"));
+        
+        // Act & Assert
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            service.fuzzySearch(query, fuzziness);
+        });
+        
+        assertTrue(exception.getMessage().contains("Fuzzy search failed"));
+    }
+    
     private DocumentIndex createDocumentIndex(UUID documentId, String title, String content) {
         DocumentIndex doc = new DocumentIndex();
         doc.setId(documentId.toString());
