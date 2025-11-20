@@ -5,11 +5,9 @@ import fhtw.wien.genaiworker.dto.SummaryResultMessage;
 import fhtw.wien.genaiworker.exception.GenAIException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 
 @Service
@@ -24,8 +22,8 @@ public class SummarizationService {
     }
 
 
-    @Async
-    public CompletableFuture<SummaryResultMessage> processSummarization(OcrResultDto ocrMessage) {
+    // Synchronous processing - RabbitMQ listener handles concurrency with multiple threads
+    public SummaryResultMessage processSummarization(OcrResultDto ocrMessage) {
         log.info("📝 Processing summarization for document: {} ('{}'), {} chars from {} pages",
                 ocrMessage.documentId(), ocrMessage.documentTitle(),
                 ocrMessage.totalCharacters(), ocrMessage.totalPages());
@@ -36,13 +34,11 @@ public class SummarizationService {
         Optional<String> validationError = validateOcrResult(ocrMessage);
         if (validationError.isPresent()) {
             log.warn("⚠️ Validation failed: {}", validationError.get());
-            return CompletableFuture.completedFuture(
-                    SummaryResultMessage.failure(
-                            ocrMessage.documentId(),
-                            ocrMessage.documentTitle(),
-                            validationError.get(),
-                            System.currentTimeMillis() - startTime
-                    )
+            return SummaryResultMessage.failure(
+                    ocrMessage.documentId(),
+                    ocrMessage.documentTitle(),
+                    validationError.get(),
+                    System.currentTimeMillis() - startTime
             );
         }
 
@@ -53,39 +49,33 @@ public class SummarizationService {
             long processingTime = System.currentTimeMillis() - startTime;
             log.info("✅ Summary generated for document {} in {}ms", ocrMessage.documentId(), processingTime);
 
-            return CompletableFuture.completedFuture(
-                    SummaryResultMessage.success(
-                            ocrMessage.documentId(),
-                            ocrMessage.documentTitle(),
-                            summary,
-                            processingTime
-                    )
+            return SummaryResultMessage.success(
+                    ocrMessage.documentId(),
+                    ocrMessage.documentTitle(),
+                    summary,
+                    processingTime
             );
 
         } catch (GenAIException e) {
             long processingTime = System.currentTimeMillis() - startTime;
             log.error("❌ GenAI error for document {}: {}", ocrMessage.documentId(), e.getMessage());
 
-            return CompletableFuture.completedFuture(
-                    SummaryResultMessage.failure(
-                            ocrMessage.documentId(),
-                            ocrMessage.documentTitle(),
-                            "GenAI API error: " + e.getMessage(),
-                            processingTime
-                    )
+            return SummaryResultMessage.failure(
+                    ocrMessage.documentId(),
+                    ocrMessage.documentTitle(),
+                    "GenAI API error: " + e.getMessage(),
+                    processingTime
             );
 
         } catch (Exception e) {
             long processingTime = System.currentTimeMillis() - startTime;
             log.error("❌ Unexpected error for document {}", ocrMessage.documentId(), e);
 
-            return CompletableFuture.completedFuture(
-                    SummaryResultMessage.failure(
-                            ocrMessage.documentId(),
-                            ocrMessage.documentTitle(),
-                            "Unexpected error: " + e.getMessage(),
-                            processingTime
-                    )
+            return SummaryResultMessage.failure(
+                    ocrMessage.documentId(),
+                    ocrMessage.documentTitle(),
+                    "Unexpected error: " + e.getMessage(),
+                    processingTime
             );
         }
     }

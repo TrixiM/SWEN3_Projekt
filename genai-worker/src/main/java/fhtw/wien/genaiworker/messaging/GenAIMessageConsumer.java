@@ -32,36 +32,28 @@ public class GenAIMessageConsumer {
 
     @RabbitListener(queues = RabbitMQConfig.OCR_COMPLETED_QUEUE)
     public void handleOcrCompleted(OcrResultDto message) {
-        log.info("📨 Received OCR result for document: {} ('{}')", message.documentId(), message.documentTitle());
+        log.info("📨 Received OCR result for document: {} ('{})", message.documentId(), message.documentTitle());
         
-        // Check if already processed (but don't mark yet - do that after success)
+        // Check if already processed
         if (idempotencyService.isAlreadyProcessed(message.messageId())) {
             log.info("⏭️ Skipping duplicate message: {}", message.messageId());
             return;
         }
 
         try {
-            // Process summarization asynchronously
-            summarizationService.processSummarization(message)
-                    .whenComplete((result, throwable) -> {
-                        if (throwable != null) {
-                            log.error("❌ Summarization failed: {}", message.documentId(), throwable);
-                            // Don't mark as processed on failure - allow retry
-                            sendSummaryResult(SummaryResultMessage.failure(
-                                    message.documentId(),
-                                    message.documentTitle(),
-                                    "Summarization error: " + throwable.getMessage(),
-                                    0L
-                            ));
-                        } else {
-                            // Mark as processed only after successful completion
-                            idempotencyService.markAsProcessed(message.messageId());
-                            sendSummaryResult(result);
-                        }
-                    });
-
+            // Process summarization synchronously
+            SummaryResultMessage result = summarizationService.processSummarization(message);
+            
+            // Mark as processed only if successful
+            if (result.isSuccess()) {
+                idempotencyService.markAsProcessed(message.messageId());
+            }
+            
+            sendSummaryResult(result);
+            
         } catch (Exception e) {
             log.error("❌ Failed to process message: {}", message.documentId(), e);
+            // Don't mark as processed on failure - allow retry
             sendSummaryResult(SummaryResultMessage.failure(
                     message.documentId(),
                     message.documentTitle(),
