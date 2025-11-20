@@ -8,6 +8,5 @@ import java.util.UUID;
 
 public interface DocumentRepo extends JpaRepository<Document, UUID>{
 
-Optional<Document> findByChecksumSha256(String checksumSha256);
 
 }

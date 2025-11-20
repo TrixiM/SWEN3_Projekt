@@ -19,10 +19,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Service for handling MinIO object storage operations for PDF documents.
- * Provides secure upload, download, and management of document files.
- */
+
 @Service
 public class MinIOStorageService {
     
@@ -59,18 +56,7 @@ public class MinIOStorageService {
             throw new RuntimeException("Failed to initialize MinIO storage", e);
         }
     }
-    
-    /**
-     * Uploads a PDF document to MinIO storage.
-     * Protected by circuit breaker and retry logic.
-     *
-     * @param documentId the unique document ID
-     * @param filename the original filename
-     * @param contentType the content type (should be application/pdf)
-     * @param data the PDF file data
-     * @return the object key for the uploaded document
-     * @throws RuntimeException if upload fails
-     */
+
     @CircuitBreaker(name = "minioService")
     @Retry(name = "minioService")
     public String uploadDocument(UUID documentId, String filename, String contentType, byte[] data) {
@@ -101,14 +87,7 @@ public class MinIOStorageService {
         }
     }
     
-    /**
-     * Downloads a PDF document from MinIO storage.
-     * Protected by circuit breaker and retry logic.
-     *
-     * @param objectKey the object key for the document
-     * @return the document data as byte array
-     * @throws RuntimeException if download fails
-     */
+
     @CircuitBreaker(name = "minioService")
     @Retry(name = "minioService")
     public byte[] downloadDocument(String objectKey) {
@@ -135,45 +114,7 @@ public class MinIOStorageService {
         }
     }
     
-    /**
-     * Checks if a document exists in MinIO storage.
-     * Protected by circuit breaker and retry logic.
-     *
-     * @param objectKey the object key for the document
-     * @return true if the document exists, false otherwise
-     */
-    @CircuitBreaker(name = "minioService")
-    @Retry(name = "minioService")
-    public boolean documentExists(String objectKey) {
-        try {
-            StatObjectArgs statObjectArgs = StatObjectArgs.builder()
-                    .bucket(bucketName)
-                    .object(objectKey)
-                    .build();
-            
-            minioClient.statObject(statObjectArgs);
-            return true;
-            
-        } catch (ErrorResponseException e) {
-            if (e.errorResponse().code().equals("NoSuchKey")) {
-                log.debug("Document not found: {}", objectKey);
-                return false;
-            }
-            log.error("Error checking document existence: {}", objectKey, e);
-            return false;
-        } catch (Exception e) {
-            log.error("Error checking document existence: {}", objectKey, e);
-            return false;
-        }
-    }
-    
-    /**
-     * Deletes a document from MinIO storage.
-     * Protected by circuit breaker and retry logic.
-     *
-     * @param objectKey the object key for the document
-     * @throws RuntimeException if deletion fails
-     */
+
     @CircuitBreaker(name = "minioService")
     @Retry(name = "minioService")
     public void deleteDocument(String objectKey) {
@@ -194,36 +135,7 @@ public class MinIOStorageService {
             throw new RuntimeException("Failed to delete document from storage", e);
         }
     }
-    
-    /**
-     * Gets the metadata for a document in MinIO storage.
-     *
-     * @param objectKey the object key for the document
-     * @return StatObjectResponse containing document metadata
-     * @throws RuntimeException if getting metadata fails
-     */
-    public StatObjectResponse getDocumentMetadata(String objectKey) {
-        try {
-            StatObjectArgs statObjectArgs = StatObjectArgs.builder()
-                    .bucket(bucketName)
-                    .object(objectKey)
-                    .build();
-            
-            return minioClient.statObject(statObjectArgs);
-            
-        } catch (MinioException | IOException | InvalidKeyException | NoSuchAlgorithmException e) {
-            log.error("Failed to get document metadata from MinIO: objectKey={}", objectKey, e);
-            throw new RuntimeException("Failed to get document metadata", e);
-        }
-    }
-    
-    /**
-     * Generates a unique object key for a document.
-     *
-     * @param documentId the document UUID
-     * @param originalFilename the original filename
-     * @return the generated object key
-     */
+
     public String generateObjectKey(UUID documentId, String originalFilename) {
         // Create a hierarchical structure: documents/yyyy/mm/dd/documentId-filename
         String timestamp = java.time.LocalDate.now().toString().replace("-", "/");
@@ -231,18 +143,11 @@ public class MinIOStorageService {
         return String.format("documents/%s/%s-%s", timestamp, documentId, sanitizedFilename);
     }
     
-    /**
-     * Gets the configured bucket name.
-     *
-     * @return the bucket name
-     */
+
     public String getBucketName() {
         return bucketName;
     }
-    
-    /**
-     * Initializes the MinIO bucket if it doesn't exist.
-     */
+
     private void initializeBucket() {
         try {
             boolean bucketExists = minioClient.bucketExists(

@@ -4,10 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.util.List;
 
-/**
- * DTO for Google Gemini API response structure.
- * Enables type-safe parsing instead of unsafe Map casting.
- */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record GeminiResponse(
         List<Candidate> candidates
@@ -30,13 +26,7 @@ public record GeminiResponse(
     public record Part(
             String text
     ) {}
-    
-    /**
-     * Extracts the generated text from the response.
-     * 
-     * @return the generated text
-     * @throws IllegalStateException if response structure is invalid
-     */
+
     public String extractText() {
         if (candidates == null || candidates.isEmpty()) {
             throw new IllegalStateException("No candidates in Gemini API response");

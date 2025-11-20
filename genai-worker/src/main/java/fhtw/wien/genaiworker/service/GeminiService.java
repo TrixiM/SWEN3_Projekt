@@ -19,10 +19,6 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Service for interacting with Google Gemini API.
- * Generates text summaries from document content using the Gemini Pro model.
- */
 @Service
 public class GeminiService {
 
@@ -46,14 +42,6 @@ public class GeminiService {
                 .build();
     }
 
-    /**
-     * Generates a summary for the given text using Google Gemini API.
-     * Protected by circuit breaker, retry logic, and rate limiter.
-     *
-     * @param text the text to summarize
-     * @return the generated summary
-     * @throws GenAIException if summarization fails
-     */
     @CircuitBreaker(name = "geminiService")
     @Retry(name = "geminiService")
     @RateLimiter(name = "geminiService")
@@ -114,9 +102,7 @@ public class GeminiService {
         }
     }
 
-    /**
-     * Builds the request body for Gemini API.
-     */
+
     private Map<String, Object> buildRequestBody(String prompt) {
         return Map.of(
                 "contents", List.of(
@@ -133,9 +119,6 @@ public class GeminiService {
         );
     }
 
-    /**
-     * Truncates text to maximum length, trying to preserve sentence boundaries.
-     */
     private String truncateText(String text, int maxLength) {
         if (text == null || text.length() <= maxLength) {
             return text;
@@ -159,9 +142,6 @@ public class GeminiService {
         }
     }
 
-    /**
-     * Checks if the Gemini API is properly configured.
-     */
     public boolean isConfigured() {
         return config.getApi().getKey() != null && 
                !config.getApi().getKey().isEmpty() &&

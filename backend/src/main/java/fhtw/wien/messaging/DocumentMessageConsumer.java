@@ -54,11 +54,7 @@ public class DocumentMessageConsumer {
         }
     }
 
-    /**
-     * Listens for summary result messages from GenAI worker and updates documents.
-     * 
-     * @param summaryResult the summary result from GenAI worker
-     */
+
     @RabbitListener(queues = SUMMARY_RESULT_QUEUE)
     @Transactional
     public void handleSummaryResult(SummaryResultDto summaryResult) {

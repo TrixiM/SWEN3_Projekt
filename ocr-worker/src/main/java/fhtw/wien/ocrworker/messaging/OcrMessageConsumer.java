@@ -98,9 +98,7 @@ public class OcrMessageConsumer {
                 });
     }
     
-    /**
-     * Sends OCR completion message to GenAI worker for summarization.
-     */
+
     private void sendOcrCompletionMessage(OcrResultDto ocrResult) {
         try {
             rabbitTemplate.convertAndSend(
@@ -115,9 +113,7 @@ public class OcrMessageConsumer {
         }
     }
     
-    /**
-     * Helper method to send acknowledgment messages.
-     */
+
     private void sendAcknowledgment(OcrAcknowledgment acknowledgment) {
         try {
             rabbitTemplate.convertAndSend(

@@ -12,10 +12,7 @@ import org.springframework.context.annotation.Configuration;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * RabbitMQ configuration for GenAI Worker.
- * Defines queues, exchanges, and bindings for OCR completion and summary result messages.
- */
+
 @Configuration
 public class RabbitMQConfig {
 
@@ -103,7 +100,6 @@ public class RabbitMQConfig {
         Map<String, Object> args = new HashMap<>();
         args.put("x-dead-letter-exchange", DOCUMENT_EXCHANGE + ".dlx");
         args.put("x-dead-letter-routing-key", queueName + ".dlq");
-        // Note: x-message-ttl removed to avoid conflicts with existing queues
         return new Queue(queueName, true, false, false, args);
     }
     

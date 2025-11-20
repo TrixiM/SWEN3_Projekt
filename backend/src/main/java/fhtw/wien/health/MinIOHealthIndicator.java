@@ -5,9 +5,7 @@ import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.stereotype.Component;
 
-/**
- * Custom health indicator for MinIO storage connectivity.
- */
+
 @Component
 public class MinIOHealthIndicator implements HealthIndicator {
 

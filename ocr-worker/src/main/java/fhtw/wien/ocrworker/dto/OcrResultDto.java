@@ -6,10 +6,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Data transfer object for OCR processing results.
- * Contains extracted text, confidence scores, and processing metadata.
- */
 public record OcrResultDto(
         String messageId,
         UUID documentId,
@@ -27,10 +23,7 @@ public record OcrResultDto(
         @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", timezone = "UTC")
         Instant processedAt
 ) {
-    
-    /**
-     * Represents OCR results for a single page.
-     */
+
     public record PageResult(
             int pageNumber,
             String extractedText,
@@ -39,19 +32,7 @@ public record OcrResultDto(
             boolean isHighConfidence,
             long processingTimeMs
     ) {}
-    
-    /**
-     * Creates a successful OCR result.
-     *
-     * @param documentId the document UUID
-     * @param documentTitle the document title
-     * @param extractedText the complete extracted text
-     * @param pageResults results for individual pages
-     * @param language the OCR language used
-     * @param overallConfidence overall confidence score
-     * @param processingTimeMs total processing time
-     * @return successful OCR result DTO
-     */
+
     public static OcrResultDto success(
             UUID documentId,
             String documentTitle,
@@ -78,16 +59,7 @@ public record OcrResultDto(
                 Instant.now()
         );
     }
-    
-    /**
-     * Creates a failed OCR result.
-     *
-     * @param documentId the document UUID
-     * @param documentTitle the document title
-     * @param errorMessage the error message
-     * @param processingTimeMs processing time before failure
-     * @return failed OCR result DTO
-     */
+
     public static OcrResultDto failure(
             UUID documentId,
             String documentTitle,
@@ -111,14 +83,7 @@ public record OcrResultDto(
                 Instant.now()
         );
     }
-    
-    /**
-     * Creates a page result from Tesseract OCR result.
-     *
-     * @param pageNumber the page number (1-based)
-     * @param ocrResult the Tesseract OCR result
-     * @return page result DTO
-     */
+
     public static PageResult fromTesseractResult(int pageNumber, 
                                                String extractedText,
                                                int confidence,
@@ -132,21 +97,11 @@ public record OcrResultDto(
                 processingTimeMs
         );
     }
-    
-    /**
-     * Checks if the OCR processing was successful.
-     *
-     * @return true if status is SUCCESS
-     */
+
     public boolean isSuccess() {
         return "SUCCESS".equals(status);
     }
-    
-    /**
-     * Gets a summary of the OCR results.
-     *
-     * @return human-readable summary
-     */
+
     public String getSummary() {
         if (isSuccess()) {
             return String.format("OCR Success: %d characters extracted from %d pages (confidence: %d%%, time: %dms)",

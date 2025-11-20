@@ -14,10 +14,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Unified service that coordinates all OCR processing operations.
- * Handles file type detection, PDF conversion, OCR extraction, and result aggregation.
- */
+
 @Service
 public class UnifiedOcrService {
     
@@ -43,12 +40,7 @@ public class UnifiedOcrService {
         this.minioClientService = minioClientService;
     }
     
-    /**
-     * Processes a document from MinIO storage for OCR text extraction.
-     *
-     * @param document the document metadata from the message queue
-     * @return OCR processing result
-     */
+
     public OcrResultDto processDocument(DocumentResponse document) {
         long startTime = System.currentTimeMillis();
         
@@ -87,12 +79,7 @@ public class UnifiedOcrService {
         }
     }
     
-    /**
-     * Validates the document for OCR processing.
-     *
-     * @param document the document to validate
-     * @throws IllegalArgumentException if document is invalid
-     */
+
     private void validateDocument(DocumentResponse document) {
         if (document == null) {
             throw new IllegalArgumentException("Document cannot be null");
@@ -115,13 +102,7 @@ public class UnifiedOcrService {
         }
     }
     
-    /**
-     * Downloads document content from MinIO storage.
-     *
-     * @param document the document metadata
-     * @return the document data as byte array
-     * @throws IOException if download fails
-     */
+
     private byte[] downloadDocumentFromStorage(DocumentResponse document) throws IOException {
         log.debug("Downloading document from MinIO: bucket={}, key={}", document.bucket(), document.objectKey());
         
@@ -137,14 +118,7 @@ public class UnifiedOcrService {
         }
     }
     
-    /**
-     * Detects the file type for processing strategy.
-     *
-     * @param document the document metadata
-     * @param documentData the document data
-     * @return the detected file type
-     * @throws IOException if file type detection fails
-     */
+
     private FileTypeDetector.FileType detectFileType(DocumentResponse document, byte[] documentData) throws IOException {
         log.debug("Detecting file type for document: {}", document.id());
         
@@ -169,15 +143,7 @@ public class UnifiedOcrService {
         return typeFromContentType;
     }
     
-    /**
-     * Processes a PDF document for OCR.
-     *
-     * @param document the document metadata
-     * @param pdfData the PDF data
-     * @param startTime the processing start time
-     * @return OCR result
-     * @throws IOException if processing fails
-     */
+
     private OcrResultDto processPdfDocument(DocumentResponse document, byte[] pdfData, long startTime) 
             throws IOException, TesseractException {
         
@@ -264,15 +230,7 @@ public class UnifiedOcrService {
         );
     }
     
-    /**
-     * Processes an image document for OCR.
-     *
-     * @param document the document metadata
-     * @param imageData the image data
-     * @param startTime the processing start time
-     * @return OCR result
-     * @throws IOException if processing fails
-     */
+
     private OcrResultDto processImageDocument(DocumentResponse document, byte[] imageData, long startTime) 
             throws IOException, TesseractException {
         
@@ -301,14 +259,7 @@ public class UnifiedOcrService {
                 processingTime
         );
     }
-    
-    /**
-     * Creates a result for unsupported file types.
-     *
-     * @param document the document metadata
-     * @param startTime the processing start time
-     * @return OCR result indicating unsupported file type
-     */
+
     private OcrResultDto createUnsupportedFileResult(DocumentResponse document, long startTime) {
         long processingTime = System.currentTimeMillis() - startTime;
         

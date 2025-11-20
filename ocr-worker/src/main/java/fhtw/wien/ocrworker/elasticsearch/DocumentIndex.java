@@ -8,13 +8,7 @@ import org.springframework.data.elasticsearch.annotations.FieldType;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * Elasticsearch document entity for indexing OCR text content.
- * This entity is used by the OCR worker to WRITE to Elasticsearch after processing.
- * 
- * Note: A similar class exists in backend for READING from Elasticsearch.
- * Both must stay in sync regarding field mappings and index structure.
- */
+
 @Document(indexName = "documents")
 public class DocumentIndex {
     

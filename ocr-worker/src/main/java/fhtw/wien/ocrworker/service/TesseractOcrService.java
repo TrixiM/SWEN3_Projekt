@@ -15,10 +15,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Service for performing OCR text extraction using Tesseract.
- * Provides high-level OCR functionality with configuration support.
- */
+
 @Service
 public class TesseractOcrService {
     
@@ -32,27 +29,12 @@ public class TesseractOcrService {
         this.tesseract = initializeTesseract();
     }
     
-    /**
-     * Extracts text from an image using OCR.
-     *
-     * @param imageData the image data as byte array
-     * @return the extracted text
-     * @throws TesseractException if OCR processing fails
-     * @throws IOException if image cannot be read
-     */
+
     public String extractText(byte[] imageData) throws TesseractException, IOException {
         return extractText(imageData, ocrConfig.getDefaultLanguage());
     }
     
-    /**
-     * Extracts text from an image using OCR with specified language.
-     *
-     * @param imageData the image data as byte array
-     * @param language the OCR language (e.g., "eng", "deu", "fra")
-     * @return the extracted text
-     * @throws TesseractException if OCR processing fails
-     * @throws IOException if image cannot be read
-     */
+
     public String extractText(byte[] imageData, String language) throws TesseractException, IOException {
         if (imageData == null || imageData.length == 0) {
             throw new IllegalArgumentException("Image data cannot be null or empty");
@@ -99,27 +81,11 @@ public class TesseractOcrService {
         }
     }
     
-    /**
-     * Extracts text with confidence scores from an image.
-     *
-     * @param imageData the image data as byte array
-     * @return OcrResult containing text and confidence information
-     * @throws TesseractException if OCR processing fails
-     * @throws IOException if image cannot be read
-     */
     public OcrResult extractTextWithConfidence(byte[] imageData) throws TesseractException, IOException {
         return extractTextWithConfidence(imageData, ocrConfig.getDefaultLanguage());
     }
     
-    /**
-     * Extracts text with confidence scores from an image using specified language.
-     *
-     * @param imageData the image data as byte array
-     * @param language the OCR language
-     * @return OcrResult containing text and confidence information
-     * @throws TesseractException if OCR processing fails
-     * @throws IOException if image cannot be read
-     */
+
     public OcrResult extractTextWithConfidence(byte[] imageData, String language) throws TesseractException, IOException {
         if (imageData == null || imageData.length == 0) {
             throw new IllegalArgumentException("Image data cannot be null or empty");
@@ -176,11 +142,7 @@ public class TesseractOcrService {
         }
     }
     
-    /**
-     * Validates if Tesseract is properly configured and available.
-     *
-     * @return true if Tesseract is available, false otherwise
-     */
+
     public boolean isTesseractAvailable() {
         try {
             // Create a small test image
@@ -198,22 +160,13 @@ public class TesseractOcrService {
             return false;
         }
     }
-    
-    /**
-     * Gets the list of available OCR languages.
-     *
-     * @return array of available language codes
-     */
+
     public String[] getAvailableLanguages() {
         // In a production system, you might dynamically discover available languages
         return ocrConfig.getSupportedLanguages().toArray(new String[0]);
     }
     
-    /**
-     * Initializes the Tesseract instance with configuration.
-     *
-     * @return configured ITesseract instance
-     */
+
     private ITesseract initializeTesseract() {
         log.info("Initializing Tesseract OCR with config: language={}, engine_mode={}, psm={}", 
                 ocrConfig.getDefaultLanguage(), ocrConfig.getOcrEngineMode(), ocrConfig.getPageSegMode());
@@ -244,13 +197,7 @@ public class TesseractOcrService {
         return instance;
     }
     
-    /**
-     * Gets the mean confidence score for OCR result.
-     * This is a simplified implementation - in production you might use more sophisticated methods.
-     *
-     * @param image the processed image
-     * @return confidence score (0-100)
-     */
+
     private int getMeanConfidence(BufferedImage image) {
         try {
             synchronized (tesseract) {
@@ -265,9 +212,7 @@ public class TesseractOcrService {
         }
     }
     
-    /**
-     * Represents an OCR result with confidence information.
-     */
+
     public static class OcrResult {
         private final String text;
         private final int confidence;

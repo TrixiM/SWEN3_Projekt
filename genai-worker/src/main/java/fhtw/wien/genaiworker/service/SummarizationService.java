@@ -11,10 +11,7 @@ import org.springframework.stereotype.Service;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-/**
- * Service for processing document summarization requests.
- * Coordinates between OCR results and GenAI summary generation.
- */
+
 @Service
 public class SummarizationService {
 
@@ -26,12 +23,7 @@ public class SummarizationService {
         this.geminiService = geminiService;
     }
 
-    /**
-     * Processes an OCR completion message and generates a summary asynchronously.
-     *
-     * @param ocrMessage the OCR completion message
-     * @return CompletableFuture containing the summary result
-     */
+
     @Async
     public CompletableFuture<SummaryResultMessage> processSummarization(OcrResultDto ocrMessage) {
         log.info("📝 Processing summarization for document: {} ('{}'), {} chars from {} pages",
@@ -98,12 +90,7 @@ public class SummarizationService {
         }
     }
 
-    /**
-     * Validates the OCR result before processing.
-     *
-     * @param ocrMessage the OCR message to validate
-     * @return Optional containing error message if validation fails, empty otherwise
-     */
+
     private Optional<String> validateOcrResult(OcrResultDto ocrMessage) {
         if (!ocrMessage.isSuccess()) {
             return Optional.of("OCR processing was not successful, cannot generate summary");

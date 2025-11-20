@@ -17,10 +17,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Service for converting PDF documents to images suitable for OCR processing.
- * Uses Apache PDFBox for high-quality PDF to image conversion.
- */
 @Service
 public class PdfConverterService {
     
@@ -31,14 +27,7 @@ public class PdfConverterService {
     public PdfConverterService(OcrConfig ocrConfig) {
         this.ocrConfig = ocrConfig;
     }
-    
-    /**
-     * Converts all pages of a PDF to images.
-     *
-     * @param pdfData the PDF file data
-     * @return list of image data for each page
-     * @throws IOException if conversion fails
-     */
+
     public List<byte[]> convertPdfToImages(byte[] pdfData) throws IOException {
         log.info("Converting PDF to images, size: {} bytes, DPI: {}", 
                 pdfData.length, ocrConfig.getPdfRenderingDpi());
@@ -87,14 +76,7 @@ public class PdfConverterService {
         }
     }
     
-    /**
-     * Converts a specific page of a PDF to an image.
-     *
-     * @param pdfData the PDF file data
-     * @param pageNumber the page number (1-based)
-     * @return the image data for the specified page
-     * @throws IOException if conversion fails
-     */
+
     public byte[] convertPdfPageToImage(byte[] pdfData, int pageNumber) throws IOException {
         log.debug("Converting PDF page {} to image, DPI: {}", pageNumber, ocrConfig.getPdfRenderingDpi());
         
@@ -131,14 +113,7 @@ public class PdfConverterService {
             throw new IOException("Failed to convert PDF page " + pageNumber, e);
         }
     }
-    
-    /**
-     * Gets the number of pages in a PDF document.
-     *
-     * @param pdfData the PDF file data
-     * @return the number of pages
-     * @throws IOException if PDF cannot be read
-     */
+
     public int getPdfPageCount(byte[] pdfData) throws IOException {
         try (PDDocument document = Loader.loadPDF(pdfData)) {
             int pageCount = document.getNumberOfPages();
@@ -150,12 +125,7 @@ public class PdfConverterService {
         }
     }
     
-    /**
-     * Validates if the PDF data is valid and readable.
-     *
-     * @param pdfData the PDF file data
-     * @return true if PDF is valid, false otherwise
-     */
+
     public boolean isValidPdf(byte[] pdfData) {
         if (pdfData == null || pdfData.length == 0) {
             log.warn("PDF data is null or empty");
@@ -171,15 +141,7 @@ public class PdfConverterService {
             return false;
         }
     }
-    
-    /**
-     * Preprocesses an image for better OCR accuracy.
-     * Applies contrast enhancement and noise reduction if enabled.
-     *
-     * @param imageData the original image data
-     * @return the preprocessed image data
-     * @throws IOException if preprocessing fails
-     */
+
     public byte[] preprocessImage(byte[] imageData) throws IOException {
         if (!ocrConfig.isEnablePreprocessing()) {
             log.debug("Image preprocessing is disabled, returning original image");
@@ -210,14 +172,7 @@ public class PdfConverterService {
         }
     }
     
-    /**
-     * Converts a BufferedImage to byte array in the specified format.
-     *
-     * @param image the image to convert
-     * @param format the image format (PNG, JPEG, etc.)
-     * @return the image data as byte array
-     * @throws IOException if conversion fails
-     */
+
     private byte[] convertImageToBytes(BufferedImage image, String format) throws IOException {
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             if (!ImageIO.write(image, format, outputStream)) {
@@ -227,20 +182,8 @@ public class PdfConverterService {
         }
     }
     
-    /**
-     * Enhances an image for better OCR accuracy.
-     * Applies contrast enhancement and basic noise reduction.
-     *
-     * @param originalImage the original image
-     * @return the enhanced image
-     */
+
     private BufferedImage enhanceImageForOcr(BufferedImage originalImage) {
-        // For now, return the original image
-        // In a production system, you might apply:
-        // - Contrast enhancement
-        // - Noise reduction
-        // - Sharpening filters
-        // - Binarization
         
         log.debug("Applied OCR enhancement to image: {}x{}", 
                 originalImage.getWidth(), originalImage.getHeight());

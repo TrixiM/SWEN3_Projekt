@@ -9,9 +9,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Service for tracking processed messages to ensure idempotency in OCR worker.
- */
+
 @Service
 public class IdempotencyService {
     

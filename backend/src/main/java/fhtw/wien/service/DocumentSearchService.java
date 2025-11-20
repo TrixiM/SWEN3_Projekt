@@ -17,9 +17,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * Service for searching documents using Elasticsearch.
- */
+
 @Service
 public class DocumentSearchService {
     
@@ -34,9 +32,7 @@ public class DocumentSearchService {
         this.elasticsearchOperations = elasticsearchOperations;
     }
     
-    /**
-     * Search documents by query string (searches in content and title).
-     */
+
     public List<DocumentSearchDto> search(String queryString) {
         log.info("🔍 Searching documents for: '{}'", queryString);
         
@@ -61,10 +57,7 @@ public class DocumentSearchService {
             throw new RuntimeException("Search failed: " + e.getMessage(), e);
         }
     }
-    
-    /**
-     * Search documents by title only.
-     */
+
     public List<DocumentSearchDto> searchByTitle(String title) {
         log.info("🔍 Searching documents by title: '{}'", title);
         
@@ -77,10 +70,7 @@ public class DocumentSearchService {
             throw new RuntimeException("Title search failed: " + e.getMessage(), e);
         }
     }
-    
-    /**
-     * Search documents by content only.
-     */
+
     public List<DocumentSearchDto> searchByContent(String content) {
         log.info("🔍 Searching documents by content: '{}'", content);
         
@@ -94,12 +84,7 @@ public class DocumentSearchService {
         }
     }
     
-    /**
-     * Fuzzy search documents (handles typos and misspellings).
-     * @param queryString the search query
-     * @param fuzziness the edit distance (0-2, where AUTO is recommended)
-     * @return list of matching documents
-     */
+
     public List<DocumentSearchDto> fuzzySearch(String queryString, String fuzziness) {
         log.info("🔍 Fuzzy searching documents for: '{}' with fuzziness: {}", queryString, fuzziness);
         
@@ -150,17 +135,12 @@ public class DocumentSearchService {
             throw new RuntimeException("Fuzzy search failed: " + e.getMessage(), e);
         }
     }
-    
-    /**
-     * Fuzzy search with default fuzziness (AUTO).
-     */
+
     public List<DocumentSearchDto> fuzzySearch(String queryString) {
         return fuzzySearch(queryString, "AUTO");
     }
     
-    /**
-     * Maps a list of DocumentIndex to DocumentSearchDto.
-     */
+
     private List<DocumentSearchDto> mapToSearchDtos(List<DocumentIndex> documents) {
         return documents.stream()
                 .map(doc -> DocumentSearchDto.from(
@@ -177,9 +157,7 @@ public class DocumentSearchService {
                 .collect(Collectors.toList());
     }
     
-    /**
-     * Escape special JSON characters in query string.
-     */
+
     private String escapeJson(String str) {
         return str.replace("\\", "\\\\")
                   .replace("\"", "\\\"")

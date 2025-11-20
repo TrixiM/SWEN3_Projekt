@@ -3,9 +3,7 @@ package fhtw.wien.genaiworker.config;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
-/**
- * Configuration properties for GenAI (Google Gemini) integration.
- */
+
 @Configuration
 @ConfigurationProperties(prefix = "gemini")
 public class GenAIConfig {

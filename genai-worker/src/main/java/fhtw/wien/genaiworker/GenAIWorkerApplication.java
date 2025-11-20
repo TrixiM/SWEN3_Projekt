@@ -6,13 +6,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableAsync;
 
-/**
- * GenAI Worker Application
- * 
- * This microservice listens for OCR completion events via RabbitMQ,
- * generates document summaries using Google Gemini API, and publishes
- * the results back to the message queue for the backend to consume.
- */
+
 @SpringBootApplication
 @EnableAsync
 public class GenAIWorkerApplication {

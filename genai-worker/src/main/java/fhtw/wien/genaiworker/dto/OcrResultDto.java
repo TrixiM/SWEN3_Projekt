@@ -4,10 +4,6 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * DTO for receiving OCR results from OCR worker.
- * This matches the OcrResultDto from the OCR worker.
- */
 public record OcrResultDto(
         String messageId,
         UUID documentId,
@@ -24,17 +20,10 @@ public record OcrResultDto(
         @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", timezone = "UTC")
         Instant processedAt
 ) {
-    
-    /**
-     * Checks if OCR was successful.
-     */
+
     public boolean isSuccess() {
         return "SUCCESS".equals(status);
     }
-    
-    /**
-     * Checks if there is meaningful text to summarize.
-     */
     public boolean hasValidText() {
         return extractedText != null && 
                !extractedText.trim().isEmpty() && 

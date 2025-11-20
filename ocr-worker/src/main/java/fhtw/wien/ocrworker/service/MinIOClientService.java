@@ -17,10 +17,7 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.TimeUnit;
 
-/**
- * MinIO client service for the OCR worker to download documents from storage.
- * Provides read-only access to MinIO for OCR processing.
- */
+
 @Service
 public class MinIOClientService {
     
@@ -60,14 +57,7 @@ public class MinIOClientService {
         }
     }
     
-    /**
-     * Downloads a document from MinIO storage.
-     * Protected by circuit breaker and retry logic.
-     *
-     * @param objectKey the object key for the document
-     * @return the document data as byte array
-     * @throws RuntimeException if download fails
-     */
+
     @CircuitBreaker(name = "minioService")
     @Retry(name = "minioService")
     public byte[] downloadDocument(String objectKey) {
@@ -105,12 +95,7 @@ public class MinIOClientService {
         }
     }
     
-    /**
-     * Checks if a document exists in MinIO storage.
-     *
-     * @param objectKey the object key for the document
-     * @return true if the document exists, false otherwise
-     */
+
     public boolean documentExists(String objectKey) {
         if (objectKey == null || objectKey.trim().isEmpty()) {
             return false;
@@ -138,13 +123,7 @@ public class MinIOClientService {
         }
     }
     
-    /**
-     * Gets the metadata for a document in MinIO storage.
-     *
-     * @param objectKey the object key for the document
-     * @return StatObjectResponse containing document metadata
-     * @throws RuntimeException if getting metadata fails
-     */
+
     public StatObjectResponse getDocumentMetadata(String objectKey) {
         if (objectKey == null || objectKey.trim().isEmpty()) {
             throw new IllegalArgumentException("Object key cannot be null or empty");
@@ -169,20 +148,12 @@ public class MinIOClientService {
         }
     }
     
-    /**
-     * Gets the configured bucket name.
-     *
-     * @return the bucket name
-     */
+
     public String getBucketName() {
         return bucketName;
     }
     
-    /**
-     * Validates the MinIO connection and bucket access.
-     *
-     * @throws Exception if validation fails
-     */
+
     private void validateConnection() throws Exception {
         try {
             // Check if bucket exists and is accessible
@@ -201,11 +172,7 @@ public class MinIOClientService {
         }
     }
     
-    /**
-     * Checks if the MinIO service is healthy and accessible.
-     *
-     * @return true if MinIO is accessible, false otherwise
-     */
+
     public boolean isHealthy() {
         try {
             minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucketName).build());

@@ -10,9 +10,7 @@ import org.springframework.stereotype.Component;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Consumer for OCR completion messages to update document analytics.
- */
+
 @Component
 public class OcrCompletionConsumer {
     

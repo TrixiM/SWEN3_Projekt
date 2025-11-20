@@ -11,10 +11,7 @@ import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
-/**
- * RabbitMQ consumer for GenAI Worker.
- * Listens for OCR completion messages and triggers document summarization.
- */
+
 @Component
 public class GenAIMessageConsumer {
 
@@ -32,11 +29,7 @@ public class GenAIMessageConsumer {
         this.idempotencyService = idempotencyService;
     }
 
-    /**
-     * Listens for OCR completion messages and triggers summarization.
-     *
-     * @param message the OCR completion message
-     */
+
     @RabbitListener(queues = RabbitMQConfig.OCR_COMPLETED_QUEUE)
     public void handleOcrCompleted(OcrResultDto message) {
         log.info("📨 Received OCR result for document: {} ('{}')", message.documentId(), message.documentTitle());
@@ -75,11 +68,7 @@ public class GenAIMessageConsumer {
         }
     }
 
-    /**
-     * Sends summary result to RabbitMQ for backend consumption.
-     *
-     * @param result the summary result message
-     */
+
     private void sendSummaryResult(SummaryResultMessage result) {
         try {
             rabbitTemplate.convertAndSend(

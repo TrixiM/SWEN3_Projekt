@@ -3,9 +3,7 @@ package fhtw.wien.dto;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * DTO for document search results.
- */
+
 public record DocumentSearchDto(
         UUID documentId,
         String title,
@@ -17,9 +15,7 @@ public record DocumentSearchDto(
         Instant indexedAt,
         Instant processedAt
 ) {
-    /**
-     * Creates a search result with a content snippet.
-     */
+
     public static DocumentSearchDto from(UUID documentId, String title, String content, 
                                         int totalCharacters, int totalPages, String language, 
                                         int confidence, Instant indexedAt, Instant processedAt) {

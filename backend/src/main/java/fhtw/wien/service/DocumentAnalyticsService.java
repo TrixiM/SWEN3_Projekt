@@ -14,9 +14,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-/**
- * Service for managing document analytics.
- */
+
 @Service
 public class DocumentAnalyticsService {
     
@@ -28,9 +26,7 @@ public class DocumentAnalyticsService {
         this.repository = repository;
     }
     
-    /**
-     * Create or update analytics for a document.
-     */
+
     @Transactional
     public DocumentAnalyticsDto createOrUpdateAnalytics(UUID documentId, int totalCharacters, 
                                                         int totalWords, int totalPages, 
@@ -60,17 +56,13 @@ public class DocumentAnalyticsService {
         return mapToDto(analytics);
     }
     
-    /**
-     * Get analytics for a specific document.
-     */
+
     public Optional<DocumentAnalyticsDto> getAnalyticsByDocumentId(UUID documentId) {
         log.info("🔍 Retrieving analytics for document: {}", documentId);
         return repository.findByDocumentId(documentId).map(this::mapToDto);
     }
     
-    /**
-     * Get all high-quality documents.
-     */
+
     public List<DocumentAnalyticsDto> getHighQualityDocuments() {
         log.info("🔍 Retrieving high-quality documents");
         List<DocumentAnalytics> documents = repository.findByIsHighQuality(true);
@@ -78,9 +70,7 @@ public class DocumentAnalyticsService {
         return documents.stream().map(this::mapToDto).collect(Collectors.toList());
     }
     
-    /**
-     * Get documents by language.
-     */
+
     public List<DocumentAnalyticsDto> getDocumentsByLanguage(String language) {
         log.info("🔍 Retrieving documents by language: {}", language);
         return repository.findByLanguage(language).stream()
@@ -88,9 +78,7 @@ public class DocumentAnalyticsService {
                 .collect(Collectors.toList());
     }
     
-    /**
-     * Get documents with minimum confidence.
-     */
+
     public List<DocumentAnalyticsDto> getDocumentsByMinConfidence(int minConfidence) {
         log.info("🔍 Retrieving documents with confidence >= {}", minConfidence);
         return repository.findByAverageConfidenceGreaterThanEqual(minConfidence).stream()
@@ -98,9 +86,7 @@ public class DocumentAnalyticsService {
                 .collect(Collectors.toList());
     }
     
-    /**
-     * Get overall analytics summary.
-     */
+
     public AnalyticsSummaryDto getAnalyticsSummary() {
         log.info("📊 Generating analytics summary");
         
@@ -133,9 +119,7 @@ public class DocumentAnalyticsService {
         );
     }
     
-    /**
-     * Map DocumentAnalytics entity to DTO.
-     */
+
     private DocumentAnalyticsDto mapToDto(DocumentAnalytics analytics) {
         return new DocumentAnalyticsDto(
                 analytics.getId(),

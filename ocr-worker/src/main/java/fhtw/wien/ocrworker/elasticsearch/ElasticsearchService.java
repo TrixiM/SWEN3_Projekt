@@ -7,10 +7,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.UUID;
 
-/**
- * Service for indexing documents in Elasticsearch.
- * Search functionality is handled by the backend service.
- */
 @Service
 public class ElasticsearchService {
     
@@ -21,10 +17,7 @@ public class ElasticsearchService {
     public ElasticsearchService(DocumentIndexRepository repository) {
         this.repository = repository;
     }
-    
-    /**
-     * Index OCR result into Elasticsearch.
-     */
+
     public DocumentIndex indexDocument(OcrResultDto ocrResult) {
         log.info("📇 Indexing document {} into Elasticsearch", ocrResult.documentId());
         
@@ -51,9 +44,7 @@ public class ElasticsearchService {
         }
     }
     
-    /**
-     * Delete document from index.
-     */
+
     public void deleteDocument(UUID documentId) {
         log.info("🗑️ Deleting document {} from Elasticsearch", documentId);
         try {
