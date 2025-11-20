@@ -14,9 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * REST controller for document analytics operations.
- */
+
 @RestController
 @RequestMapping("/api/analytics")
 @Tag(name = "Document Analytics", description = "Endpoints for document analytics and statistics")
@@ -30,9 +28,7 @@ public class DocumentAnalyticsController {
         this.analyticsService = analyticsService;
     }
     
-    /**
-     * Get analytics for a specific document.
-     */
+
     @GetMapping("/documents/{documentId}")
     @Operation(summary = "Get document analytics", 
                description = "Retrieve analytics data for a specific document")
@@ -47,9 +43,7 @@ public class DocumentAnalyticsController {
                 .orElse(ResponseEntity.notFound().build());
     }
     
-    /**
-     * Get all high-quality documents.
-     */
+
     @GetMapping("/high-quality")
     @Operation(summary = "Get high-quality documents", 
                description = "Retrieve all documents marked as high quality")
@@ -59,9 +53,7 @@ public class DocumentAnalyticsController {
         return ResponseEntity.ok(documents);
     }
     
-    /**
-     * Get documents by language.
-     */
+
     @GetMapping("/language/{language}")
     @Operation(summary = "Get documents by language", 
                description = "Retrieve documents filtered by OCR language")
@@ -73,10 +65,7 @@ public class DocumentAnalyticsController {
         List<DocumentAnalyticsDto> documents = analyticsService.getDocumentsByLanguage(language);
         return ResponseEntity.ok(documents);
     }
-    
-    /**
-     * Get documents with minimum confidence.
-     */
+
     @GetMapping("/confidence/{minConfidence}")
     @Operation(summary = "Get documents by minimum confidence", 
                description = "Retrieve documents with OCR confidence above threshold")
@@ -94,9 +83,7 @@ public class DocumentAnalyticsController {
         return ResponseEntity.ok(documents);
     }
     
-    /**
-     * Get overall analytics summary.
-     */
+
     @GetMapping("/summary")
     @Operation(summary = "Get analytics summary", 
                description = "Retrieve overall analytics summary for all documents")

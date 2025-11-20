@@ -11,10 +11,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * Entity for tracking document analytics and statistics.
- * Provides insights into document processing and content quality.
- */
+
 @Entity
 @Table(name = "document_analytics")
 @EntityListeners(AuditingEntityListener.class)
@@ -86,9 +83,7 @@ public class DocumentAnalytics {
         this.isHighQuality = this.qualityScore >= 70.0;
     }
     
-    /**
-     * Calculate quality score based on OCR confidence and content density.
-     */
+
     private double calculateQualityScore() {
         // Confidence weight: 70%
         double confidenceScore = averageConfidence * 0.7;
@@ -100,9 +95,7 @@ public class DocumentAnalytics {
         return confidenceScore + densityScore;
     }
     
-    /**
-     * Update analytics with new data.
-     */
+
     public void updateAnalytics(int totalCharacters, int totalWords, int totalPages, 
                                 int averageConfidence, long ocrProcessingTimeMs) {
         this.totalCharacters = totalCharacters;

@@ -23,25 +23,26 @@ public final class PdfValidator {
     }
     
     /**
-     * Validates that a document has PDF data and that the PDF is readable.
+     * Validates that PDF data is not null and is readable.
      * 
-     * @param document the document to validate
+     * @param pdfData the PDF data to validate
+     * @param documentId the document ID for logging purposes
      * @throws NotFoundException if PDF data is null
      * @throws InvalidRequestException if PDF is corrupted or unreadable
      */
-    public static void validatePdfData(Document document) {
-        if (document.getPdfData() == null) {
-            log.error("PDF data is null for document: {}", document.getId());
-            throw new NotFoundException("PDF data not found for document: " + document.getId());
+    public static void validatePdfData(byte[] pdfData, String documentId) {
+        if (pdfData == null || pdfData.length == 0) {
+            log.error("PDF data is null or empty for document: {}", documentId);
+            throw new NotFoundException("PDF data not found for document: " + documentId);
         }
         
         // Quick validation by trying to load the PDF
-        try (PDDocument pdfDocument = Loader.loadPDF(document.getPdfData())) {
+        try (PDDocument pdfDocument = Loader.loadPDF(pdfData)) {
             // Just loading is enough to validate basic structure
-            log.debug("PDF validation successful for document: {}", document.getId());
+            log.debug("PDF validation successful for document: {}", documentId);
         } catch (IOException e) {
-            log.error("PDF validation failed for document: {}", document.getId(), e);
-            throw new InvalidRequestException("Invalid PDF format for document: " + document.getId());
+            log.error("PDF validation failed for document: {}", documentId, e);
+            throw new InvalidRequestException("Invalid PDF format for document: " + documentId);
         }
     }
     

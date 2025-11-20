@@ -13,9 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * REST controller for document search operations using Elasticsearch.
- */
+
 @RestController
 @RequestMapping("/api/documents/search")
 @Tag(name = "Document Search", description = "Endpoints for searching documents using full-text search")
@@ -29,9 +27,7 @@ public class DocumentSearchController {
         this.searchService = searchService;
     }
     
-    /**
-     * Search documents by query string (searches in both title and content).
-     */
+
     @GetMapping
     @Operation(summary = "Search documents", 
                description = "Search documents by query string in both title and content fields")
@@ -56,9 +52,7 @@ public class DocumentSearchController {
         }
     }
     
-    /**
-     * Search documents by title only.
-     */
+
     @GetMapping("/title")
     @Operation(summary = "Search documents by title", 
                description = "Search documents by title field only")
@@ -83,9 +77,7 @@ public class DocumentSearchController {
         }
     }
     
-    /**
-     * Search documents by content only.
-     */
+
     @GetMapping("/content")
     @Operation(summary = "Search documents by content", 
                description = "Search documents by content field only")
@@ -109,10 +101,7 @@ public class DocumentSearchController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
-    
-    /**
-     * Fuzzy search documents (handles typos and misspellings).
-     */
+
     @GetMapping("/fuzzy")
     @Operation(summary = "Fuzzy search documents", 
                description = "Fuzzy search documents in both title and content fields. Handles typos and misspellings. "
@@ -140,9 +129,7 @@ public class DocumentSearchController {
         }
     }
     
-    /**
-     * Validates search query string.
-     */
+
     private boolean isValidQuery(String query) {
         if (query == null || query.trim().isEmpty()) {
             log.warn("⚠️ Empty search query received");

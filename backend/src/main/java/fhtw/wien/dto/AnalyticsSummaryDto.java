@@ -1,8 +1,6 @@
 package fhtw.wien.dto;
 
-/**
- * DTO for overall analytics summary.
- */
+
 public record AnalyticsSummaryDto(
         long totalDocuments,
         long highQualityDocuments,

@@ -106,7 +106,8 @@ public class DocumentSearchService {
         try {
             // Build Elasticsearch fuzzy query using query string DSL
             String queryJson = String.format(
-                """{
+                """
+                {
                     "bool": {
                         "should": [
                             {
@@ -127,7 +128,8 @@ public class DocumentSearchService {
                             }
                         ]
                     }
-                }""",
+                }
+                """,
                 escapeJson(queryString), fuzziness,
                 escapeJson(queryString), fuzziness
             );

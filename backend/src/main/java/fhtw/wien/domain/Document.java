@@ -71,10 +71,7 @@ public class Document {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    /**
-     * Minimal constructor for document creation with user-provided data only.
-     * Storage metadata (bucket, objectKey, storageUri) will be set by business logic.
-     */
+
     public Document(
             String title,
             String originalFilename,
@@ -89,9 +86,7 @@ public class Document {
         this.tags = new ArrayList<>();
     }
 
-    /**
-     * Full constructor with all metadata (used for persistence/testing).
-     */
+
     public Document(
             String title,
             String originalFilename,

@@ -89,10 +89,7 @@ public class PdfRenderingBusinessLogic {
         }
     }
     
-    /**
-     * Private helper method to render a PDF page to an image.
-     * Extracted to improve readability and testability.
-     */
+
     private byte[] renderPageToImage(PDDocument pdfDocument, int pageNumber, float scale, Object documentId) throws IOException {
         PDFRenderer renderer = new PDFRenderer(pdfDocument);
         BufferedImage image = renderer.renderImageWithDPI(pageNumber - 1, DEFAULT_DPI * scale);

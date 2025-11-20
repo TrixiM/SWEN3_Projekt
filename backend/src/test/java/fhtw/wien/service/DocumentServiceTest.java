@@ -54,9 +54,11 @@ class DocumentServiceTest {
                 "Test Title", "file.txt", "text/plain", 123L,
                 "test-bucket", "object-key", "s3://test-bucket/object-key", "abc123"
         );
+        byte[] pdfData = new byte[]{0x25, 0x50, 0x44, 0x46}; // Mock PDF data
         when(repo.save(doc)).thenReturn(doc);
+        when(minioStorageService.uploadDocument(any(), any(), any(), any())).thenReturn("object-key");
 
-        Document result = service.create(doc);
+        Document result = service.create(doc, pdfData);
 
         assertEquals(doc, result);
         verify(repo).save(doc);

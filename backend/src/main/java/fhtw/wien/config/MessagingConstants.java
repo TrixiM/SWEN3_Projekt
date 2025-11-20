@@ -1,9 +1,6 @@
 package fhtw.wien.config;
 
-/**
- * Shared constants for RabbitMQ configuration.
- * Centralizes messaging configuration to prevent duplication and ensure consistency.
- */
+
 public final class MessagingConstants {
     
     private MessagingConstants() {

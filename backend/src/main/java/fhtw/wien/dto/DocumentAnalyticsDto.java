@@ -3,9 +3,7 @@ package fhtw.wien.dto;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * DTO for document analytics data.
- */
+
 public record DocumentAnalyticsDto(
         UUID id,
         UUID documentId,

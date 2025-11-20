@@ -150,11 +150,7 @@ public class RabbitMQConfig {
         return factory;
     }
     
-    /**
-     * Helper method to create a queue with Dead Letter Exchange configuration.
-     * Note: TTL removed to avoid conflicts with existing queues.
-     * DLQ routing is configured for rejected/failed messages.
-     */
+
     private Queue createQueueWithDLQ(String queueName) {
         Map<String, Object> args = new HashMap<>();
         args.put("x-dead-letter-exchange", DOCUMENT_EXCHANGE + ".dlx");
