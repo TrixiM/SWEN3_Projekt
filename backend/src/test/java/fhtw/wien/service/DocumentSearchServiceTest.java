@@ -2,7 +2,6 @@ package fhtw.wien.service;
 
 import fhtw.wien.dto.DocumentSearchDto;
 import fhtw.wien.elasticsearch.DocumentIndex;
-import fhtw.wien.elasticsearch.DocumentSearchRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,9 +25,6 @@ import static org.mockito.Mockito.*;
 class DocumentSearchServiceTest {
     
     @Mock
-    private DocumentSearchRepository repository;
-    
-    @Mock
     private ElasticsearchOperations elasticsearchOperations;
     
     @Mock
@@ -41,7 +37,7 @@ class DocumentSearchServiceTest {
     
     @BeforeEach
     void setUp() {
-        service = new DocumentSearchService(repository, elasticsearchOperations);
+        service = new DocumentSearchService(elasticsearchOperations);
     }
     
     @Test
@@ -115,50 +111,6 @@ class DocumentSearchServiceTest {
         assertTrue(results.get(0).contentSnippet().endsWith("..."));
     }
     
-    @Test
-    void testSearchByTitle_Success() {
-        // Arrange
-        String title = "Test Document";
-        UUID documentId = UUID.randomUUID();
-        
-        DocumentIndex doc = createDocumentIndex(documentId, title, "Test content");
-        
-        when(repository.findByTitleContaining(title)).thenReturn(List.of(doc));
-        
-        // Act
-        List<DocumentSearchDto> results = service.searchByTitle(title);
-        
-        // Assert
-        assertNotNull(results);
-        assertEquals(1, results.size());
-        assertEquals(documentId, results.get(0).documentId());
-        assertEquals(title, results.get(0).title());
-        
-        verify(repository).findByTitleContaining(title);
-    }
-    
-    @Test
-    void testSearchByContent_Success() {
-        // Arrange
-        String content = "specific content";
-        UUID documentId = UUID.randomUUID();
-        
-        DocumentIndex doc = createDocumentIndex(documentId, "Document", 
-                "This document contains specific content");
-        
-        when(repository.findByContentContaining(content)).thenReturn(List.of(doc));
-        
-        // Act
-        List<DocumentSearchDto> results = service.searchByContent(content);
-        
-        // Assert
-        assertNotNull(results);
-        assertEquals(1, results.size());
-        assertEquals(documentId, results.get(0).documentId());
-        assertTrue(results.get(0).contentSnippet().contains("specific content"));
-        
-        verify(repository).findByContentContaining(content);
-    }
     
     @Test
     void testSearch_Exception() {

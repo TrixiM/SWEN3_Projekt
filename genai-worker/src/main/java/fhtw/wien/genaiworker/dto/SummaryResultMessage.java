@@ -8,11 +8,15 @@ public record SummaryResultMessage(
         UUID documentId,
         String title,
         String summary,
-        String status,
+        Status status,
         String errorMessage,
         long processingTimeMs,
         Instant timestamp
 ) {
+    
+    public enum Status {
+        SUCCESS, FAILED, PENDING
+    }
     
 
     public static SummaryResultMessage success(UUID documentId, String title, String summary, long processingTimeMs) {
@@ -21,7 +25,7 @@ public record SummaryResultMessage(
                 documentId,
                 title,
                 summary,
-                "SUCCESS",
+                Status.SUCCESS,
                 null,
                 processingTimeMs,
                 Instant.now()
@@ -35,7 +39,7 @@ public record SummaryResultMessage(
                 documentId,
                 title,
                 null,
-                "FAILED",
+                Status.FAILED,
                 errorMessage,
                 processingTimeMs,
                 Instant.now()
@@ -43,6 +47,6 @@ public record SummaryResultMessage(
     }
 
     public boolean isSuccess() {
-        return "SUCCESS".equalsIgnoreCase(status);
+        return status == Status.SUCCESS;
     }
 }

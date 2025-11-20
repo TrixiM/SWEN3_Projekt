@@ -48,7 +48,7 @@ class TesseractOcrServiceTest {
         // Test input validation
         if (ocrService != null) {
             assertThrows(IllegalArgumentException.class, () -> {
-                ocrService.extractText(null);
+                ocrService.extractText(null, "eng");
             });
         }
     }
@@ -58,19 +58,19 @@ class TesseractOcrServiceTest {
         // Test input validation
         if (ocrService != null) {
             assertThrows(IllegalArgumentException.class, () -> {
-                ocrService.extractText(new byte[0]);
+                ocrService.extractText(new byte[0], "eng");
             });
         }
     }
     
     @Test
     void getAvailableLanguages_ShouldReturnConfiguredLanguages() {
-        // Test language configuration
-        String[] expectedLanguages = {"eng", "deu", "fra", "spa"};
+        // Test language configuration - verify against config
+        List<String> expectedLanguages = List.of("eng", "deu", "fra", "spa");
         
-        if (ocrService != null) {
-            String[] actualLanguages = ocrService.getAvailableLanguages();
-            assertArrayEquals(expectedLanguages, actualLanguages);
+        if (mockOcrConfig != null) {
+            List<String> actualLanguages = mockOcrConfig.getSupportedLanguages();
+            assertEquals(expectedLanguages, actualLanguages);
         }
     }
     

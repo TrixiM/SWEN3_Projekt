@@ -73,9 +73,6 @@ public class MinIOStorageService {
         String objectKey = generateObjectKey(documentId, filename);
         
         try {
-            log.info("Uploading document to MinIO: bucket={}, key={}, size={} bytes", 
-                    bucketName, objectKey, size);
-            
             PutObjectArgs putObjectArgs = PutObjectArgs.builder()
                     .bucket(bucketName)
                     .object(objectKey)
@@ -83,11 +80,7 @@ public class MinIOStorageService {
                     .contentType(contentType)
                     .build();
             
-            ObjectWriteResponse response = minioClient.putObject(putObjectArgs);
-            
-            log.info("Successfully uploaded document: etag={}, version={}", 
-                    response.etag(), response.versionId());
-            
+            minioClient.putObject(putObjectArgs);
             return objectKey;
             
         } catch (MinioException | IOException | InvalidKeyException | NoSuchAlgorithmException e) {
@@ -97,26 +90,18 @@ public class MinIOStorageService {
         }
     }
     
-
     @CircuitBreaker(name = "minioService")
     @Retry(name = "minioService")
-    public byte[] downloadDocument(String objectKey) {
+    public InputStream downloadDocumentStream(String objectKey) {
         try {
-            log.info("Downloading document from MinIO: bucket={}, key={}", bucketName, objectKey);
+            log.debug("Downloading from MinIO: key={}", objectKey);
             
             GetObjectArgs getObjectArgs = GetObjectArgs.builder()
                     .bucket(bucketName)
                     .object(objectKey)
                     .build();
             
-            try (InputStream inputStream = minioClient.getObject(getObjectArgs)) {
-                byte[] data = IOUtils.toByteArray(inputStream);
-                
-                log.info("Successfully downloaded document: key={}, size={} bytes", 
-                        objectKey, data.length);
-                
-                return data;
-            }
+            return minioClient.getObject(getObjectArgs);
             
         } catch (MinioException | IOException | InvalidKeyException | NoSuchAlgorithmException e) {
             log.error("Failed to download document from MinIO: objectKey={}", objectKey, e);
@@ -127,9 +112,23 @@ public class MinIOStorageService {
 
     @CircuitBreaker(name = "minioService")
     @Retry(name = "minioService")
+    public byte[] downloadDocument(String objectKey) {
+        try (InputStream inputStream = downloadDocumentStream(objectKey)) {
+            byte[] data = IOUtils.toByteArray(inputStream);
+            log.debug("Downloaded to byte[]: key={}, size={} bytes", objectKey, data.length);
+            return data;
+        } catch (IOException e) {
+            log.error("Failed to read document stream: objectKey={}", objectKey, e);
+            throw new RuntimeException("Failed to read document from storage", e);
+        }
+    }
+    
+
+    @CircuitBreaker(name = "minioService")
+    @Retry(name = "minioService")
     public void deleteDocument(String objectKey) {
         try {
-            log.info("Deleting document from MinIO: bucket={}, key={}", bucketName, objectKey);
+            log.debug("Deleting from MinIO: key={}", objectKey);
             
             RemoveObjectArgs removeObjectArgs = RemoveObjectArgs.builder()
                     .bucket(bucketName)
@@ -137,8 +136,6 @@ public class MinIOStorageService {
                     .build();
             
             minioClient.removeObject(removeObjectArgs);
-            
-            log.info("Successfully deleted document: key={}", objectKey);
             
         } catch (MinioException | IOException | InvalidKeyException | NoSuchAlgorithmException e) {
             log.error("Failed to delete document from MinIO: objectKey={}", objectKey, e);

@@ -32,11 +32,11 @@ public class GenAIMessageConsumer {
 
     @RabbitListener(queues = RabbitMQConfig.OCR_COMPLETED_QUEUE)
     public void handleOcrCompleted(OcrResultDto message) {
-        log.info("📨 Received OCR result for document: {} ('{})", message.documentId(), message.documentTitle());
+        log.info("🤖 Summarization started: id={}, chars={}", message.documentId(), message.totalCharacters());
         
         // Check if already processed
         if (idempotencyService.isAlreadyProcessed(message.messageId())) {
-            log.info("⏭️ Skipping duplicate message: {}", message.messageId());
+            log.info("⏭️ Skipping duplicate: {}", message.documentId());
             return;
         }
 
@@ -71,7 +71,7 @@ public class GenAIMessageConsumer {
                     RabbitMQConfig.SUMMARY_RESULT_ROUTING_KEY,
                     result
             );
-            log.info("📤 Sent {} result for document: {}", result.status(), result.documentId());
+            log.debug("📤 Sent result: id={}, status={}", result.documentId(), result.status());
         } catch (Exception e) {
             log.error("❌ Failed to send result: {}", result.documentId(), e);
         }

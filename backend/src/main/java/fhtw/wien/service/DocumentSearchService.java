@@ -2,16 +2,18 @@ package fhtw.wien.service;
 
 import fhtw.wien.dto.DocumentSearchDto;
 import fhtw.wien.elasticsearch.DocumentIndex;
-import fhtw.wien.elasticsearch.DocumentSearchRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.FuzzyQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
+import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.elasticsearch.core.query.Criteria;
 import org.springframework.data.elasticsearch.core.query.CriteriaQuery;
-import org.springframework.data.elasticsearch.core.query.Query;
-import org.springframework.data.elasticsearch.core.query.StringQuery;
+import org.springframework.data.elasticsearch.core.query.FetchSourceFilter;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,12 +25,9 @@ public class DocumentSearchService {
     
     private static final Logger log = LoggerFactory.getLogger(DocumentSearchService.class);
     
-    private final DocumentSearchRepository repository;
     private final ElasticsearchOperations elasticsearchOperations;
     
-    public DocumentSearchService(DocumentSearchRepository repository,
-                                ElasticsearchOperations elasticsearchOperations) {
-        this.repository = repository;
+    public DocumentSearchService(ElasticsearchOperations elasticsearchOperations) {
         this.elasticsearchOperations = elasticsearchOperations;
     }
     
@@ -41,7 +40,12 @@ public class DocumentSearchService {
             Criteria criteria = new Criteria("content").contains(queryString)
                     .or("title").contains(queryString);
             
-            Query query = new CriteriaQuery(criteria);
+            CriteriaQuery criteriaQuery = new CriteriaQuery(criteria);
+            criteriaQuery.addSourceFilter(new FetchSourceFilter(new String[]{"documentId", "title", "totalCharacters", 
+                            "totalPages", "language", "confidence", "indexedAt", "processedAt"}, 
+                            new String[]{"content"}));
+            
+            org.springframework.data.elasticsearch.core.query.Query query = criteriaQuery;
             
             SearchHits<DocumentIndex> searchHits = elasticsearchOperations.search(query, DocumentIndex.class);
             List<DocumentIndex> documents = searchHits.stream()
@@ -58,69 +62,35 @@ public class DocumentSearchService {
         }
     }
 
-    public List<DocumentSearchDto> searchByTitle(String title) {
-        log.info("🔍 Searching documents by title: '{}'", title);
-        
-        try {
-            List<DocumentIndex> results = repository.findByTitleContaining(title);
-            return mapToSearchDtos(results);
-                    
-        } catch (Exception e) {
-            log.error("❌ Title search failed for '{}': {}", title, e.getMessage(), e);
-            throw new RuntimeException("Title search failed: " + e.getMessage(), e);
-        }
-    }
-
-    public List<DocumentSearchDto> searchByContent(String content) {
-        log.info("🔍 Searching documents by content: '{}'", content);
-        
-        try {
-            List<DocumentIndex> results = repository.findByContentContaining(content);
-            return mapToSearchDtos(results);
-                    
-        } catch (Exception e) {
-            log.error("❌ Content search failed for '{}': {}", content, e.getMessage(), e);
-            throw new RuntimeException("Content search failed: " + e.getMessage(), e);
-        }
-    }
     
 
     public List<DocumentSearchDto> fuzzySearch(String queryString, String fuzziness) {
         log.info("🔍 Fuzzy searching documents for: '{}' with fuzziness: {}", queryString, fuzziness);
         
         try {
-            // Build Elasticsearch fuzzy query using query string DSL
-            String queryJson = String.format(
-                """
-                {
-                    "bool": {
-                        "should": [
-                            {
-                                "fuzzy": {
-                                    "content": {
-                                        "value": "%s",
-                                        "fuzziness": "%s"
-                                    }
-                                }
-                            },
-                            {
-                                "fuzzy": {
-                                    "title": {
-                                        "value": "%s",
-                                        "fuzziness": "%s"
-                                    }
-                                }
-                            }
-                        ]
-                    }
-                }
-                """,
-                escapeJson(queryString), fuzziness,
-                escapeJson(queryString), fuzziness
-            );
+            // Build Elasticsearch fuzzy query using native query builders
+            Query contentFuzzy = FuzzyQuery.of(f -> f
+                    .field("content")
+                    .value(queryString)
+                    .fuzziness(fuzziness))._toQuery();
             
-            Query query = new StringQuery(queryJson);
-            SearchHits<DocumentIndex> searchHits = elasticsearchOperations.search(query, DocumentIndex.class);
+            Query titleFuzzy = FuzzyQuery.of(f -> f
+                    .field("title")
+                    .value(queryString)
+                    .fuzziness(fuzziness))._toQuery();
+            
+            Query boolQuery = BoolQuery.of(b -> b
+                    .should(contentFuzzy)
+                    .should(titleFuzzy))._toQuery();
+            
+            NativeQuery nativeQuery = NativeQuery.builder()
+                    .withQuery(boolQuery)
+                    .withSourceFilter(new FetchSourceFilter(new String[]{"documentId", "title", "totalCharacters", 
+                            "totalPages", "language", "confidence", "indexedAt", "processedAt"}, 
+                            new String[]{"content"}))
+                    .build();
+            
+            SearchHits<DocumentIndex> searchHits = elasticsearchOperations.search(nativeQuery, DocumentIndex.class);
             
             List<DocumentIndex> documents = searchHits.stream()
                     .map(SearchHit::getContent)
@@ -155,14 +125,5 @@ public class DocumentSearchService {
                         doc.getProcessedAt()
                 ))
                 .collect(Collectors.toList());
-    }
-    
-
-    private String escapeJson(String str) {
-        return str.replace("\\", "\\\\")
-                  .replace("\"", "\\\"")
-                  .replace("\n", "\\n")
-                  .replace("\r", "\\r")
-                  .replace("\t", "\\t");
     }
 }

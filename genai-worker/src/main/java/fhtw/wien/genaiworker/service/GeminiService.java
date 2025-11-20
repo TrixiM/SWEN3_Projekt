@@ -48,7 +48,6 @@ public class GeminiService {
     @Retry(name = "geminiService")
     @RateLimiter(name = "geminiService")
     public String generateSummary(String text) {
-        log.debug("🤖 Calling Gemini API (input: {} chars)", text.length());
         long startTime = System.currentTimeMillis();
 
         try {
@@ -81,10 +80,7 @@ public class GeminiService {
             }
 
             String summary = response.getBody().extractText();
-            
-            long processingTime = System.currentTimeMillis() - startTime;
-            log.debug("✅ Gemini API returned summary in {}ms ({} chars)", processingTime, summary.length());
-            
+            log.debug("✅ Gemini API: {}ms, {} chars", System.currentTimeMillis() - startTime, summary.length());
             return summary;
 
         } catch (HttpClientErrorException e) {

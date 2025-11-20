@@ -24,9 +24,6 @@ public class SummarizationService {
 
     // Synchronous processing - RabbitMQ listener handles concurrency with multiple threads
     public SummaryResultMessage processSummarization(OcrResultDto ocrMessage) {
-        log.info("📝 Processing summarization for document: {} ('{}'), {} chars from {} pages",
-                ocrMessage.documentId(), ocrMessage.documentTitle(),
-                ocrMessage.totalCharacters(), ocrMessage.totalPages());
 
         long startTime = System.currentTimeMillis();
 
@@ -47,7 +44,7 @@ public class SummarizationService {
             String summary = geminiService.generateSummary(ocrMessage.extractedText());
 
             long processingTime = System.currentTimeMillis() - startTime;
-            log.info("✅ Summary generated for document {} in {}ms", ocrMessage.documentId(), processingTime);
+            log.info("✅ Summary generated: id={}, time={}ms", ocrMessage.documentId(), processingTime);
 
             return SummaryResultMessage.success(
                     ocrMessage.documentId(),

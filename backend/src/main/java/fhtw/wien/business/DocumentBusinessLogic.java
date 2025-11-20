@@ -44,7 +44,6 @@ public class DocumentBusinessLogic {
         try {
             // For new documents, upload to MinIO first
             if (doc.getId() == null && pdfStream != null) {
-                log.debug("Uploading new document to MinIO storage");
                 
                 // Generate ID for new document
                 doc.setId(UUID.randomUUID());
@@ -62,13 +61,10 @@ public class DocumentBusinessLogic {
                 doc.setBucket(minioStorageService.getBucketName());
                 doc.setObjectKey(objectKey);
                 doc.setStorageUri(String.format("minio://%s/%s", doc.getBucket(), objectKey));
-                
-                log.debug("Document uploaded to MinIO: bucket={}, key={}", doc.getBucket(), objectKey);
             }
             
-            log.debug("Saving document metadata to repository: {}", doc.getId());
             Document saved = repository.save(doc);
-            log.debug("Document saved successfully: {}", saved.getId());
+            log.info("Document saved: id={}, objectKey={}", saved.getId(), saved.getObjectKey());
             return saved;
             
         } catch (Exception e) {
@@ -89,38 +85,18 @@ public class DocumentBusinessLogic {
     @Transactional(readOnly = true)
     public Document getDocumentById(UUID id) {
         validateId(id);
-        log.debug("Fetching document by ID: {}", id);
-        try {
-            return repository.findById(id)
-                    .orElseThrow(() -> {
-                        log.warn("Document not found with ID: {}", id);
-                        return new NotFoundException("Document not found: " + id);
-                    });
-        } catch (NotFoundException e) {
-            throw e; // Re-throw NotFoundException as-is
-        } catch (Exception e) {
-            log.error("Error fetching document with ID: {}", id, e);
-            throw new DataAccessException("Failed to fetch document", e);
-        }
+        return repository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Document not found: " + id));
     }
 
     @Transactional(readOnly = true)
     public List<Document> getAllDocuments() {
-        log.debug("Fetching all documents from repository");
-        try {
-            List<Document> documents = repository.findAll();
-            log.debug("Fetched {} documents from repository", documents.size());
-            return documents;
-        } catch (Exception e) {
-            log.error("Failed to fetch all documents", e);
-            throw new DataAccessException("Failed to fetch documents", e);
-        }
+        return repository.findAll();
     }
 
     @Transactional
     public void deleteDocument(UUID id) {
         validateId(id);
-        log.info("Deleting document with ID: {}", id);
         try {
             // Get document first to obtain MinIO object key
             Document document = repository.findById(id)
@@ -133,7 +109,6 @@ public class DocumentBusinessLogic {
             if (document.getObjectKey() != null) {
                 try {
                     minioStorageService.deleteDocument(document.getObjectKey());
-                    log.debug("Document deleted from MinIO: {}", document.getObjectKey());
                 } catch (Exception minioException) {
                     log.warn("Failed to delete document from MinIO (continuing with DB delete): {}", 
                             document.getObjectKey(), minioException);
@@ -142,7 +117,6 @@ public class DocumentBusinessLogic {
             
             // Delete from database
             repository.deleteById(id);
-            log.info("Document deleted from repository: {}", id);
             
         } catch (NotFoundException e) {
             throw e; // Re-throw NotFoundException as-is
@@ -166,15 +140,7 @@ public class DocumentBusinessLogic {
             throw new DataAccessException("Document content not available - missing storage reference");
         }
         
-        try {
-            log.debug("Retrieving document content from MinIO: {}", document.getObjectKey());
-            byte[] content = minioStorageService.downloadDocument(document.getObjectKey());
-            log.debug("Retrieved document content: {} bytes", content.length);
-            return content;
-        } catch (Exception e) {
-            log.error("Failed to retrieve document content from MinIO: {}", document.getObjectKey(), e);
-            throw new DataAccessException("Failed to retrieve document content", e);
-        }
+        return minioStorageService.downloadDocument(document.getObjectKey());
     }
     
     /**

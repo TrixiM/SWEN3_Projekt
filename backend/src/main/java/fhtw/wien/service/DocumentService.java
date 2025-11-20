@@ -53,7 +53,6 @@ public class DocumentService {
             // Publish message after document is created
             DocumentResponse response = DocumentMapper.toResponse(created);
             messageProducer.publishDocumentCreated(response);
-            log.info("Document created and message published: id={}, title={}", created.getId(), created.getTitle());
             
             return created;
         } catch (Exception e) {
@@ -68,7 +67,7 @@ public class DocumentService {
             
             // Publish message after document is updated
             DocumentResponse response = DocumentMapper.toResponse(updated);
-            log.info("Document updated: id={}, title={}", updated.getId(), updated.getTitle());
+            log.debug("Document updated: id={}", updated.getId());
             
             return updated;
         } catch (Exception e) {
@@ -78,25 +77,11 @@ public class DocumentService {
     }
 
     public Document get(UUID id) {
-        log.debug("Retrieving document with ID: {}", id);
-        try {
-            return documentBusinessLogic.getDocumentById(id);
-        } catch (Exception e) {
-            log.error("Failed to retrieve document with ID: {}", id, e);
-            throw e; // Re-throw to preserve original exception type (e.g., NotFoundException)
-        }
+        return documentBusinessLogic.getDocumentById(id);
     }
 
     public List<Document> getAll() {
-        log.debug("Retrieving all documents");
-        try {
-            List<Document> documents = documentBusinessLogic.getAllDocuments();
-            log.debug("Retrieved {} documents", documents.size());
-            return documents;
-        } catch (Exception e) {
-            log.error("Failed to retrieve documents", e);
-            throw new ServiceException("Failed to retrieve documents", e);
-        }
+        return documentBusinessLogic.getAllDocuments();
     }
 
     public void delete(UUID id) {
@@ -105,7 +90,7 @@ public class DocumentService {
             
             // Publish message after document is deleted
             messageProducer.publishDocumentDeleted(id);
-            log.info("Document deleted and message published: id={}", id);
+            log.debug("Document deleted, message published: id={}", id);
         } catch (Exception e) {
             log.error("Failed to delete document with ID: {}", id, e);
             throw new ServiceException("Failed to delete document", e);
@@ -114,41 +99,16 @@ public class DocumentService {
 
 
     public byte[] renderPdfPage(UUID id, int pageNumber, float scale) {
-        log.info("Rendering page {} of document {} with scale {}", pageNumber, id, scale);
-        try {
-            var doc = documentBusinessLogic.getDocumentById(id);
-            byte[] renderedPage = pdfRenderingBusinessLogic.renderPdfPage(doc, pageNumber, scale);
-            log.debug("Successfully rendered page {} for document {}", pageNumber, id);
-            return renderedPage;
-        } catch (Exception e) {
-            log.error("Failed to render page {} of document {}", pageNumber, id, e);
-            throw e; // Re-throw to preserve original exception type
-        }
+        var doc = documentBusinessLogic.getDocumentById(id);
+        return pdfRenderingBusinessLogic.renderPdfPage(doc, pageNumber, scale);
     }
 
     public int getPdfPageCount(UUID id) {
-        log.debug("Getting page count for document {}", id);
-        try {
-            var doc = documentBusinessLogic.getDocumentById(id);
-            int pageCount = pdfRenderingBusinessLogic.getPdfPageCount(doc);
-            log.debug("Document {} has {} pages", id, pageCount);
-            return pageCount;
-        } catch (Exception e) {
-            log.error("Failed to get page count for document {}", id, e);
-            throw e; // Re-throw to preserve original exception type
-        }
+        var doc = documentBusinessLogic.getDocumentById(id);
+        return pdfRenderingBusinessLogic.getPdfPageCount(doc);
     }
 
     public byte[] getDocumentContent(Document document) {
-        log.debug("Retrieving content for document {}", document.getId());
-        try {
-            byte[] content = documentBusinessLogic.getDocumentContent(document);
-            log.debug("Retrieved content for document {}, size: {} bytes", 
-                    document.getId(), content.length);
-            return content;
-        } catch (Exception e) {
-            log.error("Failed to retrieve content for document {}", document.getId(), e);
-            throw new ServiceException("Failed to retrieve document content", e);
-        }
+        return documentBusinessLogic.getDocumentContent(document);
     }
 }

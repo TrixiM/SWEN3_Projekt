@@ -2,7 +2,6 @@ package fhtw.wien.ocrworker.messaging;
 
 import fhtw.wien.ocrworker.config.RabbitMQConfig;
 import fhtw.wien.ocrworker.dto.DocumentResponse;
-import fhtw.wien.ocrworker.dto.OcrAcknowledgment;
 import fhtw.wien.ocrworker.dto.OcrResultDto;
 import fhtw.wien.ocrworker.elasticsearch.ElasticsearchService;
 import fhtw.wien.ocrworker.service.IdempotencyService;
@@ -12,8 +11,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
-
-import java.time.Instant;
 
 @Component
 public class OcrMessageConsumer {
@@ -35,67 +32,30 @@ public class OcrMessageConsumer {
 
     @RabbitListener(queues = RabbitMQConfig.DOCUMENT_CREATED_QUEUE)
     public void handleDocumentCreated(DocumentResponse document) {
-        log.info("📄 OCR WORKER RECEIVED: Document created - ID: {}, Title: '{}'",
-                document.id(), document.title());
+        log.info("📄 OCR started: id={}, file='{}'", document.id(), document.originalFilename());
         
         // Idempotency check
         String messageId = "ocr-doc-" + document.id();
         if (!idempotencyService.tryMarkAsProcessed(messageId)) {
-            log.info("⏭️ Skipping duplicate document processing: {}", document.id());
+            log.info("⏭️ Skipping duplicate: {}", document.id());
             return;
         }
         
-        log.info("📋 Document Details:");
-        log.info("   - Filename: {}", document.originalFilename());
-        log.info("   - Content Type: {}", document.contentType());
-        log.info("   - Size: {} bytes", document.sizeBytes());
-        log.info("   - Status: {}", document.status());
+        OcrResultDto ocrResult = ocrProcessingService.processDocument(document);
         
-        // Process document using the improved async service
-        log.info("🔄 Delegating OCR processing to service...");
+        log.info("✅ OCR done: id={}, chars={}", document.id(), ocrResult.totalCharacters());
         
-        ocrProcessingService.processDocument(document)
-                .whenComplete((ocrResult, throwable) -> {
-                    if (throwable != null) {
-                        log.error("❌ OCR processing failed for document: {}", document.id(), throwable);
-                        // Send failure acknowledgment
-                        OcrAcknowledgment failureAck = new OcrAcknowledgment(
-                                document.id(),
-                                document.title(),
-                                "FAILED",
-                                "Processing failed: " + throwable.getMessage(),
-                                Instant.now()
-                        );
-                        sendAcknowledgment(failureAck);
-                    } else {
-                        log.info("✅ OCR processing completed for document: {} with status: {}", 
-                                document.id(), ocrResult.status());
-                        
-                        // Index document in Elasticsearch if OCR was successful
-                        if (ocrResult.isSuccess() && ocrResult.extractedText() != null && !ocrResult.extractedText().isEmpty()) {
-                            try {
-                                elasticsearchService.indexDocument(ocrResult);
-                                log.info("📇 Document {} successfully indexed in Elasticsearch", document.id());
-                            } catch (Exception e) {
-                                log.error("❌ Failed to index document {} in Elasticsearch: {}", 
-                                        document.id(), e.getMessage(), e);
-                            }
-                        }
-                        
-                        // Send OCR result to GenAI worker for summarization
-                        sendOcrCompletionMessage(ocrResult);
-                        
-                        // Send acknowledgment (for backward compatibility)
-                        OcrAcknowledgment ack = new OcrAcknowledgment(
-                                document.id(),
-                                document.title(),
-                                ocrResult.status(),
-                                ocrResult.getSummary(),
-                                Instant.now()
-                        );
-                        sendAcknowledgment(ack);
-                    }
-                });
+        // Index document in Elasticsearch if OCR was successful
+        if (ocrResult.isSuccess() && ocrResult.extractedText() != null && !ocrResult.extractedText().isEmpty()) {
+            try {
+                elasticsearchService.indexDocument(ocrResult);
+            } catch (Exception e) {
+                log.error("❌ Elasticsearch indexing failed: {}", document.id(), e);
+            }
+        }
+        
+        // Send OCR result to GenAI worker for summarization
+        sendOcrCompletionMessage(ocrResult);
     }
     
 
@@ -106,24 +66,8 @@ public class OcrMessageConsumer {
                     RabbitMQConfig.OCR_COMPLETED_ROUTING_KEY,
                     ocrResult
             );
-            log.info("📤 Sent OCR completion message to GenAI worker for document: {} ({} characters)",
-                    ocrResult.documentId(), ocrResult.totalCharacters());
         } catch (Exception e) {
-            log.error("❌ Failed to send OCR completion message for document: {}", ocrResult.documentId(), e);
-        }
-    }
-    
-
-    private void sendAcknowledgment(OcrAcknowledgment acknowledgment) {
-        try {
-            rabbitTemplate.convertAndSend(
-                    RabbitMQConfig.DOCUMENT_EXCHANGE,
-                    "document.created.ack",
-                    acknowledgment
-            );
-            log.info("📤 Sent acknowledgment to queue for document: {}", acknowledgment.documentId());
-        } catch (Exception e) {
-            log.error("❌ Failed to send acknowledgment for document: {}", acknowledgment.documentId(), e);
+            log.error("❌ Failed to send OCR result: {}", ocrResult.documentId(), e);
         }
     }
 }

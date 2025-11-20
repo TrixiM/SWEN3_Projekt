@@ -31,12 +31,7 @@ public class PdfRenderingBusinessLogic {
     }
 
     public byte[] renderPdfPage(Document document, int pageNumber, float scale) {
-        log.debug("Rendering page {} of document {} with scale {}", pageNumber, document.getId(), scale);
-        
-        // Validate inputs
-        if (document == null) {
-            throw new InvalidRequestException("Document cannot be null");
-        }
+        log.debug("Rendering page {} with scale {}", pageNumber, scale);
         PdfValidator.validateScale(scale);
 
         try {
@@ -64,12 +59,6 @@ public class PdfRenderingBusinessLogic {
     }
 
     public int getPdfPageCount(Document document) {
-        log.debug("Getting page count for document: {}", document.getId());
-        
-        // Validate document
-        if (document == null) {
-            throw new InvalidRequestException("Document cannot be null");
-        }
 
         try {
             // Get PDF content from MinIO

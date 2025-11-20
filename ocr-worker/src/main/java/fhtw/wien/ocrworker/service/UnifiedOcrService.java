@@ -44,8 +44,6 @@ public class UnifiedOcrService {
     public OcrResultDto processDocument(DocumentResponse document) {
         long startTime = System.currentTimeMillis();
         
-        log.info("Starting OCR processing for document: {} ('{}')", document.id(), document.title());
-        
         try {
             // Validate document
             validateDocument(document);
@@ -63,7 +61,6 @@ public class UnifiedOcrService {
                 case UNSUPPORTED -> createUnsupportedFileResult(document, startTime);
             };
             
-            log.info("OCR processing completed for document: {} - {}", document.id(), result.getSummary());
             return result;
             
         } catch (Exception e) {
@@ -96,63 +93,24 @@ public class UnifiedOcrService {
         if (!fileTypeDetector.isSupportedContentType(document.contentType())) {
             log.warn("Unsupported content type for document {}: {}", document.id(), document.contentType());
         }
-        
-        if (!fileTypeDetector.isValidFileSize(document.sizeBytes(), ocrConfig.getMaxFileSizeBytes())) {
-            throw new IllegalArgumentException("Document size exceeds maximum allowed size");
-        }
     }
     
 
     private byte[] downloadDocumentFromStorage(DocumentResponse document) throws IOException {
-        log.debug("Downloading document from MinIO: bucket={}, key={}", document.bucket(), document.objectKey());
-        
-        try {
-            byte[] data = minioClientService.downloadDocument(document.objectKey());
-            
-            log.debug("Successfully downloaded document: {} bytes", data.length);
-            return data;
-            
-        } catch (Exception e) {
-            log.error("Failed to download document from MinIO: {}", document.objectKey(), e);
-            throw new IOException("Failed to download document from storage", e);
-        }
+        return minioClientService.downloadDocument(document.objectKey());
     }
     
 
     private FileTypeDetector.FileType detectFileType(DocumentResponse document, byte[] documentData) throws IOException {
-        log.debug("Detecting file type for document: {}", document.id());
-        
-        // First try by content type
-        FileTypeDetector.FileType typeFromContentType = fileTypeDetector.getFileTypeFromContentType(document.contentType());
-        
-        // Then verify by magic number
-        FileTypeDetector.FileType typeFromMagicNumber;
+        // Detect file type using magic number analysis
         try (ByteArrayInputStream inputStream = new ByteArrayInputStream(documentData)) {
-            typeFromMagicNumber = fileTypeDetector.detectFileType(inputStream);
+            return fileTypeDetector.detectFileType(inputStream);
         }
-        
-        // Use magic number detection as authoritative
-        if (typeFromMagicNumber != FileTypeDetector.FileType.UNSUPPORTED) {
-            if (typeFromContentType != typeFromMagicNumber) {
-                log.warn("Content type mismatch for document {}: content-type says {}, magic number says {}", 
-                        document.id(), typeFromContentType, typeFromMagicNumber);
-            }
-            return typeFromMagicNumber;
-        }
-        
-        return typeFromContentType;
     }
     
 
     private OcrResultDto processPdfDocument(DocumentResponse document, byte[] pdfData, long startTime) 
             throws IOException, TesseractException {
-        
-        log.debug("Processing PDF document: {}", document.id());
-        
-        // Validate PDF
-        if (!pdfConverterService.isValidPdf(pdfData)) {
-            throw new IOException("Invalid or corrupted PDF document");
-        }
         
         // Convert PDF pages to images
         List<byte[]> pageImages = pdfConverterService.convertPdfToImages(pdfData);
@@ -160,8 +118,6 @@ public class UnifiedOcrService {
         if (pageImages.isEmpty()) {
             throw new IOException("PDF contains no processable pages");
         }
-        
-        log.debug("Converted PDF to {} images for OCR", pageImages.size());
         
         // Process each page with OCR
         List<OcrResultDto.PageResult> pageResults = new ArrayList<>();
@@ -173,12 +129,9 @@ public class UnifiedOcrService {
             long pageStartTime = System.currentTimeMillis();
             
             try {
-                // Preprocess image if enabled
-                byte[] imageData = pdfConverterService.preprocessImage(pageImages.get(i));
-                
                 // Extract text with confidence
                 TesseractOcrService.OcrResult ocrResult = tesseractOcrService.extractTextWithConfidence(
-                        imageData, ocrConfig.getDefaultLanguage());
+                        pageImages.get(i), ocrConfig.getDefaultLanguage());
                 
                 long pageProcessingTime = System.currentTimeMillis() - pageStartTime;
                 
@@ -201,9 +154,6 @@ public class UnifiedOcrService {
                 }
                 
                 totalConfidence += ocrResult.getConfidence();
-                
-                log.debug("Processed page {}/{}: {} characters, {}% confidence", 
-                         pageNumber, pageImages.size(), ocrResult.getText().length(), ocrResult.getConfidence());
                 
             } catch (Exception e) {
                 log.error("Failed to process page {} of document {}", pageNumber, document.id(), e);
@@ -234,14 +184,9 @@ public class UnifiedOcrService {
     private OcrResultDto processImageDocument(DocumentResponse document, byte[] imageData, long startTime) 
             throws IOException, TesseractException {
         
-        log.debug("Processing image document: {}", document.id());
-        
-        // Preprocess image if enabled
-        byte[] processedImageData = pdfConverterService.preprocessImage(imageData);
-        
         // Extract text with confidence
         TesseractOcrService.OcrResult ocrResult = tesseractOcrService.extractTextWithConfidence(
-                processedImageData, ocrConfig.getDefaultLanguage());
+                imageData, ocrConfig.getDefaultLanguage());
         
         long processingTime = System.currentTimeMillis() - startTime;
         

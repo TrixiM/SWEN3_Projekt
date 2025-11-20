@@ -30,11 +30,6 @@ public class TesseractOcrService {
     }
     
 
-    public String extractText(byte[] imageData) throws TesseractException, IOException {
-        return extractText(imageData, ocrConfig.getDefaultLanguage());
-    }
-    
-
     public String extractText(byte[] imageData, String language) throws TesseractException, IOException {
         if (imageData == null || imageData.length == 0) {
             throw new IllegalArgumentException("Image data cannot be null or empty");
@@ -58,19 +53,19 @@ public class TesseractOcrService {
                 throw new IOException("Failed to read image data");
             }
             
-            // Set language for this operation
+            // Only synchronize language setting
             synchronized (tesseract) {
                 tesseract.setLanguage(language);
-                
-                long startTime = System.currentTimeMillis();
-                String extractedText = tesseract.doOCR(image);
-                long processingTime = System.currentTimeMillis() - startTime;
-                
-                log.debug("OCR completed in {}ms, extracted {} characters", 
-                         processingTime, extractedText != null ? extractedText.length() : 0);
-                
-                return extractedText != null ? extractedText.trim() : "";
             }
+            
+            long startTime = System.currentTimeMillis();
+            String extractedText = tesseract.doOCR(image);
+            long processingTime = System.currentTimeMillis() - startTime;
+            
+            log.debug("OCR completed in {}ms, extracted {} characters", 
+                     processingTime, extractedText != null ? extractedText.length() : 0);
+            
+            return extractedText != null ? extractedText.trim() : "";
             
         } catch (TesseractException e) {
             log.error("Tesseract OCR failed for language: {}", language, e);
@@ -81,11 +76,6 @@ public class TesseractOcrService {
         }
     }
     
-    public OcrResult extractTextWithConfidence(byte[] imageData) throws TesseractException, IOException {
-        return extractTextWithConfidence(imageData, ocrConfig.getDefaultLanguage());
-    }
-    
-
     public OcrResult extractTextWithConfidence(byte[] imageData, String language) throws TesseractException, IOException {
         if (imageData == null || imageData.length == 0) {
             throw new IllegalArgumentException("Image data cannot be null or empty");
@@ -95,8 +85,7 @@ public class TesseractOcrService {
             language = ocrConfig.getDefaultLanguage();
         }
         
-        log.debug("Extracting text with confidence from image: size={} bytes, language={}", 
-                 imageData.length, language);
+        log.debug("Extracting text from image: size={} bytes, language={}", imageData.length, language);
         
         try (ByteArrayInputStream inputStream = new ByteArrayInputStream(imageData)) {
             BufferedImage image = ImageIO.read(inputStream);
@@ -105,66 +94,40 @@ public class TesseractOcrService {
                 throw new IOException("Failed to read image data");
             }
             
+            // Only synchronize language setting
             synchronized (tesseract) {
                 tesseract.setLanguage(language);
-                
-                long startTime = System.currentTimeMillis();
-                
-                // Extract text
-                String extractedText = tesseract.doOCR(image);
-                
-                // Get confidence (this is a simplified approach - in production you might use
-                // more sophisticated confidence calculation methods)
-                int meanConfidence = getMeanConfidence(image);
-                
-                long processingTime = System.currentTimeMillis() - startTime;
-                
-                OcrResult result = new OcrResult(
-                        extractedText != null ? extractedText.trim() : "",
-                        meanConfidence,
-                        language,
-                        processingTime,
-                        meanConfidence >= ocrConfig.getMinConfidenceThreshold()
-                );
-                
-                log.debug("OCR completed in {}ms, confidence: {}%, characters: {}", 
-                         processingTime, meanConfidence, result.getText().length());
-                
-                return result;
             }
             
+            long startTime = System.currentTimeMillis();
+            String extractedText = tesseract.doOCR(image);
+            long processingTime = System.currentTimeMillis() - startTime;
+            
+            // Use fixed confidence value - real confidence calculation requires additional Tesseract API calls
+            int confidence = 75;
+            
+            OcrResult result = new OcrResult(
+                    extractedText != null ? extractedText.trim() : "",
+                    confidence,
+                    language,
+                    processingTime,
+                    confidence >= ocrConfig.getMinConfidenceThreshold()
+            );
+            
+            log.debug("OCR completed in {}ms, characters: {}", processingTime, result.getText().length());
+            
+            return result;
+            
         } catch (TesseractException e) {
-            log.error("Tesseract OCR with confidence failed for language: {}", language, e);
+            log.error("Tesseract OCR failed for language: {}", language, e);
             throw e;
         } catch (IOException e) {
-            log.error("Failed to read image data for OCR with confidence", e);
+            log.error("Failed to read image data for OCR", e);
             throw e;
         }
     }
     
 
-    public boolean isTesseractAvailable() {
-        try {
-            // Create a small test image
-            BufferedImage testImage = new BufferedImage(100, 50, BufferedImage.TYPE_INT_RGB);
-            
-            synchronized (tesseract) {
-                tesseract.doOCR(testImage);
-            }
-            
-            log.debug("Tesseract availability check successful");
-            return true;
-            
-        } catch (Exception e) {
-            log.warn("Tesseract is not available or not properly configured", e);
-            return false;
-        }
-    }
-
-    public String[] getAvailableLanguages() {
-        // In a production system, you might dynamically discover available languages
-        return ocrConfig.getSupportedLanguages().toArray(new String[0]);
-    }
     
 
     private ITesseract initializeTesseract() {
@@ -195,21 +158,6 @@ public class TesseractOcrService {
         
         log.info("Tesseract OCR initialized successfully");
         return instance;
-    }
-    
-
-    private int getMeanConfidence(BufferedImage image) {
-        try {
-            synchronized (tesseract) {
-                // This is a placeholder implementation
-                // In a real implementation, you might use Tesseract's confidence methods
-                // or implement your own confidence calculation based on image quality
-                return 85; // Default confidence for demonstration
-            }
-        } catch (Exception e) {
-            log.warn("Failed to calculate confidence, using default", e);
-            return 50; // Fallback confidence
-        }
     }
     
 

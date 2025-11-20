@@ -51,56 +51,6 @@ public class DocumentSearchController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
-    
-
-    @GetMapping("/title")
-    @Operation(summary = "Search documents by title", 
-               description = "Search documents by title field only")
-    public ResponseEntity<List<DocumentSearchDto>> searchByTitle(
-            @Parameter(description = "Title search query", required = true)
-            @RequestParam String q) {
-        
-        log.info("📥 Title search request received for query: '{}'", q);
-        
-        if (!isValidQuery(q)) {
-            return ResponseEntity.badRequest().build();
-        }
-        
-        try {
-            List<DocumentSearchDto> results = searchService.searchByTitle(q);
-            log.info("✅ Title search completed, found {} results", results.size());
-            return ResponseEntity.ok(results);
-            
-        } catch (Exception e) {
-            log.error("❌ Title search failed for query '{}': {}", q, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-    
-
-    @GetMapping("/content")
-    @Operation(summary = "Search documents by content", 
-               description = "Search documents by content field only")
-    public ResponseEntity<List<DocumentSearchDto>> searchByContent(
-            @Parameter(description = "Content search query", required = true)
-            @RequestParam String q) {
-        
-        log.info("📥 Content search request received for query: '{}'", q);
-        
-        if (!isValidQuery(q)) {
-            return ResponseEntity.badRequest().build();
-        }
-        
-        try {
-            List<DocumentSearchDto> results = searchService.searchByContent(q);
-            log.info("✅ Content search completed, found {} results", results.size());
-            return ResponseEntity.ok(results);
-            
-        } catch (Exception e) {
-            log.error("❌ Content search failed for query '{}': {}", q, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
 
     @GetMapping("/fuzzy")
     @Operation(summary = "Fuzzy search documents", 

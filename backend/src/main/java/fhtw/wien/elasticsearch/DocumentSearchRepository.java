@@ -9,6 +9,4 @@ import java.util.UUID;
 
 @Repository
 public interface DocumentSearchRepository extends ElasticsearchRepository<DocumentIndex, String> {
-    List<DocumentIndex> findByContentContaining(String query);
-    List<DocumentIndex> findByTitleContaining(String query);
 }

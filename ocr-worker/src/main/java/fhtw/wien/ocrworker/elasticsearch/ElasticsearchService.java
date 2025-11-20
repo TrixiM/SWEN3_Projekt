@@ -19,7 +19,7 @@ public class ElasticsearchService {
     }
 
     public DocumentIndex indexDocument(OcrResultDto ocrResult) {
-        log.info("📇 Indexing document {} into Elasticsearch", ocrResult.documentId());
+        log.debug("📇 Indexing document {} into Elasticsearch", ocrResult.documentId());
         
         try {
             DocumentIndex documentIndex = new DocumentIndex(
@@ -33,11 +33,7 @@ public class ElasticsearchService {
                     ocrResult.processedAt()
             );
             
-            DocumentIndex saved = repository.save(documentIndex);
-            log.info("✅ Successfully indexed document {} with {} characters", 
-                    ocrResult.documentId(), ocrResult.totalCharacters());
-            
-            return saved;
+            return repository.save(documentIndex);
         } catch (Exception e) {
             log.error("❌ Failed to index document {}: {}", ocrResult.documentId(), e.getMessage(), e);
             throw new RuntimeException("Failed to index document", e);
@@ -46,10 +42,9 @@ public class ElasticsearchService {
     
 
     public void deleteDocument(UUID documentId) {
-        log.info("🗑️ Deleting document {} from Elasticsearch", documentId);
+        log.debug("🗑️ Deleting document {} from Elasticsearch", documentId);
         try {
             repository.deleteById(documentId.toString());
-            log.info("✅ Successfully deleted document {}", documentId);
         } catch (Exception e) {
             log.error("❌ Failed to delete document {}: {}", documentId, e.getMessage(), e);
             throw new RuntimeException("Failed to delete document", e);

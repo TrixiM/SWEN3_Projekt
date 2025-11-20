@@ -45,7 +45,8 @@ public class DocumentController {
         // Default title to filename if not provided
         final String documentTitle = StringUtils.hasText(title) ? title : originalFilename;
         
-        log.info("POST /v1/documents - Creating document with title: {}, filename: {}", documentTitle, originalFilename);
+        log.info("POST /v1/documents - title: '{}', filename: '{}', size: {} bytes", 
+                documentTitle, originalFilename, file.getSize());
         
         if (file.isEmpty()) {
             log.warn("Received empty file for document creation");
@@ -106,32 +107,26 @@ public class DocumentController {
 
     @GetMapping
     public List<DocumentResponse> getAll() {
-        log.debug("GET /v1/documents - Retrieving all documents");
-        // Controller only handles HTTP concerns: response mapping
-        var documents = service.getAll().stream()
+        return service.getAll().stream()
                 .map(DocumentMapper::toResponse)
                 .toList();
-        log.debug("Retrieved {} documents", documents.size());
-        return documents;
     }
 
     @GetMapping("{id}")
     public DocumentResponse get(@PathVariable UUID id) {
-        log.debug("GET /v1/documents/{} - Retrieving document", id);
-        // Controller only handles HTTP concerns: response mapping
         return DocumentMapper.toResponse(service.get(id));
     }
 
     @GetMapping("{id}/content")
     public ResponseEntity<byte[]> getContent(@PathVariable UUID id) {
-        log.info("GET /v1/documents/{}/content - Retrieving document content", id);
+        log.info("GET /v1/documents/{}/content", id);
         
         try {
             var doc = service.get(id);
             byte[] pdfData = service.getDocumentContent(doc);
             
             if (pdfData == null || pdfData.length == 0) {
-                log.warn("PDF data not found or empty for document: {}", id);
+                log.warn("PDF data not found or empty: {}", id);
                 return ResponseEntity.notFound().build();
             }
 
@@ -140,7 +135,6 @@ public class DocumentController {
             headers.setContentDispositionFormData("inline", doc.getOriginalFilename());
             headers.setContentLength(pdfData.length);
 
-            log.debug("Returning PDF content for document: {}, size: {} bytes", id, pdfData.length);
             return new ResponseEntity<>(pdfData, headers, HttpStatus.OK);
             
         } catch (Exception e) {
@@ -155,36 +149,27 @@ public class DocumentController {
             @PathVariable int pageNumber,
             @RequestParam(defaultValue = "1.5") float scale
     ) {
-        log.info("GET /v1/documents/{}/pages/{} - Rendering page with scale: {}", id, pageNumber, scale);
-        
         if (pageNumber < 1) {
-            log.warn("Invalid page number requested: {}", pageNumber);
             throw new InvalidRequestException("Page number must be greater than 0");
         }
         
-        // Controller only handles HTTP concerns: request params, response headers
         byte[] imageBytes = service.renderPdfPage(id, pageNumber, scale);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.IMAGE_PNG);
         headers.setCacheControl("max-age=3600");
 
-        log.debug("Rendered page {} for document: {}, image size: {} bytes", pageNumber, id, imageBytes.length);
         return new ResponseEntity<>(imageBytes, headers, HttpStatus.OK);
     }
 
     @GetMapping("{id}/pages/count")
     public ResponseEntity<Integer> getPageCount(@PathVariable UUID id) {
-        log.debug("GET /v1/documents/{}/pages/count - Getting page count", id);
-        // Controller only handles HTTP concerns: response wrapping
         return ResponseEntity.ok(service.getPdfPageCount(id));
     }
 
     @DeleteMapping("{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable UUID id) {
-        log.info("DELETE /v1/documents/{} - Deleting document", id);
-        // Controller only handles HTTP concerns: status code
         service.delete(id);
     }
 
