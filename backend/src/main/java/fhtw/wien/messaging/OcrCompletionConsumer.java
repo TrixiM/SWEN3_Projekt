@@ -22,7 +22,7 @@ public class OcrCompletionConsumer {
         this.analyticsService = analyticsService;
     }
     
-    @RabbitListener(queues = MessagingConstants.OCR_COMPLETED_QUEUE)
+    @RabbitListener(queues = MessagingConstants.OCR_COMPLETED_ANALYTICS_QUEUE)
     public void handleOcrCompletion(Map<String, Object> ocrResult) {
         try {
             UUID documentId = UUID.fromString((String) ocrResult.get("documentId"));

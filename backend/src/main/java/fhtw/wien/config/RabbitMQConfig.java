@@ -54,6 +54,11 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Queue ocrCompletedAnalyticsQueue() {
+        return new Queue(OCR_COMPLETED_ANALYTICS_QUEUE, true);
+    }
+
+    @Bean
     public Queue summaryResultQueue() {
         return new Queue(SUMMARY_RESULT_QUEUE, true);
     }
@@ -110,6 +115,13 @@ public class RabbitMQConfig {
     @Bean
     public Binding ocrCompletedBinding(Queue ocrCompletedQueue, DirectExchange documentExchange) {
         return BindingBuilder.bind(ocrCompletedQueue)
+                .to(documentExchange)
+                .with(OCR_COMPLETED_ROUTING_KEY);
+    }
+
+    @Bean
+    public Binding ocrCompletedAnalyticsBinding(Queue ocrCompletedAnalyticsQueue, DirectExchange documentExchange) {
+        return BindingBuilder.bind(ocrCompletedAnalyticsQueue)
                 .to(documentExchange)
                 .with(OCR_COMPLETED_ROUTING_KEY);
     }

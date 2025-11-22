@@ -16,6 +16,7 @@ public final class MessagingConstants {
     public static final String DOCUMENT_CREATED_ACK_QUEUE = "document.created.ack.queue";
     public static final String DOCUMENT_DELETED_ACK_QUEUE = "document.deleted.ack.queue";
     public static final String OCR_COMPLETED_QUEUE = "ocr.completed.queue";
+    public static final String OCR_COMPLETED_ANALYTICS_QUEUE = "ocr.completed.analytics.queue";
     public static final String SUMMARY_RESULT_QUEUE = "summary.result.queue";
     
     // Routing Keys
