@@ -113,9 +113,9 @@ async function filterDocuments() {
 
     let documentsToDisplay;
 
-    // If there's a search term, always rely on Elasticsearch
+    // If there's a search term, always rely on Elasticsearch (backend /search is fuzzy)
     if (searchTerm) {
-        console.log('🔍 Searching with Elasticsearch:', searchTerm);
+        console.log('🔍 Searching with Elasticsearch (fuzzy backend):', searchTerm);
 
         // Show search indicator
         if (searchIndicator) {
@@ -123,7 +123,9 @@ async function filterDocuments() {
         }
 
         try {
-            const searchResults = await apiRequest(API_CONFIG.ENDPOINTS.SEARCH(searchTerm));
+            const searchResults = await apiRequest(
+                API_CONFIG.ENDPOINTS.SEARCH(searchTerm)
+            );
 
             // Map search results to document metadata loaded from the API
             documentsToDisplay = searchResults
@@ -136,9 +138,9 @@ async function filterDocuments() {
                 })
                 .filter(doc => doc !== null && doc !== undefined);
 
-            console.log(`✅ Elasticsearch found ${searchResults.length} results, ${documentsToDisplay.length} matched to documents`);
+            console.log(`✅ Fuzzy search found ${searchResults.length} results, ${documentsToDisplay.length} matched to documents`);
         } catch (error) {
-            console.error('❌ Elasticsearch search failed:', error);
+            console.error('❌ Fuzzy Elasticsearch search failed:', error);
             showMessage('Search failed. Please try again.', TOAST_TYPES.ERROR);
             documentsToDisplay = [];
         } finally {

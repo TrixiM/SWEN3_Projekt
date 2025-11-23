@@ -12,7 +12,11 @@ export const API_CONFIG = {
         DOCUMENT_CONTENT: (id) => `/documents/${id}/content`,
         DOCUMENT_PAGES: (id, pageNumber, scale = 1.5) => `/documents/${id}/pages/${pageNumber}?scale=${scale}`,
         DOCUMENT_PAGE_COUNT: (id) => `/documents/${id}/pages/count`,
-        SEARCH: (query) => `/documents/search?q=${encodeURIComponent(query)}`
+        // Exact search endpoint (still available if needed)
+        SEARCH: (query) => `/documents/search?q=${encodeURIComponent(query)}`,
+        // Fuzzy full-text search endpoint (title + content, typo-tolerant)
+        FUZZY_SEARCH: (query, fuzziness = 'AUTO') =>
+            `/documents/search/fuzzy?q=${encodeURIComponent(query)}&fuzziness=${encodeURIComponent(fuzziness)}`
     }
 };
 

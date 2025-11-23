@@ -31,33 +31,12 @@ public class DocumentSearchService {
         this.elasticsearchOperations = elasticsearchOperations;
     }
     
-
-    public List<DocumentSearchDto> search(String queryString) {
-        log.info("🔍 Searching documents for: '{}'", queryString);
-        
-        try {
-            // Create a criteria query that searches in both content and title
-            Criteria criteria = new Criteria("content").contains(queryString)
-                    .or("title").contains(queryString);
-            
-            CriteriaQuery criteriaQuery = new CriteriaQuery(criteria);
-            // Fetch all fields including content for snippet generation
-            
-            org.springframework.data.elasticsearch.core.query.Query query = criteriaQuery;
-            
-            SearchHits<DocumentIndex> searchHits = elasticsearchOperations.search(query, DocumentIndex.class);
-            List<DocumentIndex> documents = searchHits.stream()
-                    .map(SearchHit::getContent)
-                    .collect(Collectors.toList());
-            
-            List<DocumentSearchDto> results = mapToSearchDtos(documents);
-            log.info("✅ Found {} results for query: '{}'", results.size(), queryString);
-            return results;
-            
-        } catch (Exception e) {
-            log.error("❌ Search failed for query '{}': {}", queryString, e.getMessage(), e);
-            throw new RuntimeException("Search failed: " + e.getMessage(), e);
-        }
+ 
+     public List<DocumentSearchDto> search(String queryString) {
+        // Delegate to fuzzy search with AUTO fuzziness so that plain /search is always
+        // full-text and typo-tolerant as well.
+        log.info("🔍 Delegating exact search to fuzzy search for query: '{}'", queryString);
+        return fuzzySearch(queryString, "AUTO");
     }
 
     
