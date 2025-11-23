@@ -87,10 +87,7 @@ public class DocumentService {
     public void delete(UUID id) {
         try {
             documentBusinessLogic.deleteDocument(id);
-            
-            // Publish message after document is deleted
-            messageProducer.publishDocumentDeleted(id);
-            log.debug("Document deleted, message published: id={}", id);
+            log.debug("Document deleted: id={}", id);
         } catch (Exception e) {
             log.error("Failed to delete document with ID: {}", id, e);
             throw new ServiceException("Failed to delete document", e);

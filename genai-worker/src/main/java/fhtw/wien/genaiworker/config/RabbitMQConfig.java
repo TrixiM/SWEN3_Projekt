@@ -9,9 +9,6 @@ import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.util.HashMap;
-import java.util.Map;
-
 
 @Configuration
 public class RabbitMQConfig {
@@ -31,11 +28,6 @@ public class RabbitMQConfig {
     public DirectExchange documentExchange() {
         return new DirectExchange(DOCUMENT_EXCHANGE, true, false);
     }
-    
-    @Bean
-    public DirectExchange deadLetterExchange() {
-        return new DirectExchange(DOCUMENT_EXCHANGE + ".dlx", true, false);
-    }
 
     @Bean
     public Queue ocrCompletedQueue() {
@@ -45,16 +37,6 @@ public class RabbitMQConfig {
     @Bean
     public Queue summaryResultQueue() {
         return new Queue(SUMMARY_RESULT_QUEUE, true);
-    }
-    
-    @Bean
-    public Queue ocrCompletedDLQ() {
-        return new Queue(OCR_COMPLETED_QUEUE + ".dlq", true);
-    }
-    
-    @Bean
-    public Queue summaryResultDLQ() {
-        return new Queue(SUMMARY_RESULT_QUEUE + ".dlq", true);
     }
 
     @Bean
@@ -94,26 +76,5 @@ public class RabbitMQConfig {
         factory.setPrefetchCount(5);
         factory.setDefaultRequeueRejected(false);
         return factory;
-    }
-    
-    private Queue createQueueWithDLQ(String queueName) {
-        Map<String, Object> args = new HashMap<>();
-        args.put("x-dead-letter-exchange", DOCUMENT_EXCHANGE + ".dlx");
-        args.put("x-dead-letter-routing-key", queueName + ".dlq");
-        return new Queue(queueName, true, false, false, args);
-    }
-    
-    @Bean
-    public Binding ocrCompletedDLQBinding(Queue ocrCompletedDLQ, DirectExchange deadLetterExchange) {
-        return BindingBuilder.bind(ocrCompletedDLQ)
-                .to(deadLetterExchange)
-                .with(OCR_COMPLETED_QUEUE + ".dlq");
-    }
-    
-    @Bean
-    public Binding summaryResultDLQBinding(Queue summaryResultDLQ, DirectExchange deadLetterExchange) {
-        return BindingBuilder.bind(summaryResultDLQ)
-                .to(deadLetterExchange)
-                .with(SUMMARY_RESULT_QUEUE + ".dlq");
     }
 }
