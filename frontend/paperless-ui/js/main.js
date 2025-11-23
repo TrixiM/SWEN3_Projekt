@@ -113,22 +113,21 @@ async function filterDocuments() {
 
     let documentsToDisplay;
 
-    try {
-        // If there's a search term, use Elasticsearch
-        if (searchTerm) {
-            console.log('🔍 Searching with Elasticsearch:', searchTerm);
-            
-            // Show search indicator
-            if (searchIndicator) {
-                searchIndicator.classList.remove('hidden');
-            }
-            
+    // If there's a search term, always rely on Elasticsearch
+    if (searchTerm) {
+        console.log('🔍 Searching with Elasticsearch:', searchTerm);
+
+        // Show search indicator
+        if (searchIndicator) {
+            searchIndicator.classList.remove('hidden');
+        }
+
+        try {
             const searchResults = await apiRequest(API_CONFIG.ENDPOINTS.SEARCH(searchTerm));
-            
-            // Map search results to document format and merge with allDocuments to get full metadata
+
+            // Map search results to document metadata loaded from the API
             documentsToDisplay = searchResults
                 .map(result => {
-                    // Find the full document from allDocuments by ID
                     const fullDoc = allDocuments.find(doc => doc.id === result.documentId);
                     if (!fullDoc) {
                         console.warn(`Document ${result.documentId} found in search but not in document list`);
@@ -136,67 +135,30 @@ async function filterDocuments() {
                     return fullDoc;
                 })
                 .filter(doc => doc !== null && doc !== undefined);
-            
-            console.log(`\u2705 Elasticsearch found ${searchResults.length} results, ${documentsToDisplay.length} matched to documents`);
-            
-            // Hide search indicator
-            if (searchIndicator) {
-                searchIndicator.classList.add('hidden');
-            }
-        } else {
-            // No search term, use all documents
-            documentsToDisplay = allDocuments;
-            
+
+            console.log(`✅ Elasticsearch found ${searchResults.length} results, ${documentsToDisplay.length} matched to documents`);
+        } catch (error) {
+            console.error('❌ Elasticsearch search failed:', error);
+            showMessage('Search failed. Please try again.', TOAST_TYPES.ERROR);
+            documentsToDisplay = [];
+        } finally {
             // Hide search indicator
             if (searchIndicator) {
                 searchIndicator.classList.add('hidden');
             }
         }
+    } else {
+        // No search term, use all documents
+        documentsToDisplay = allDocuments;
 
-        // Apply client-side filters (content type, size, status)
-        const filtered = documentsToDisplay.filter(doc => {
-            // Content type filter
-            const matchesContentType = !contentTypeFilter ||
-                doc.contentType.startsWith(contentTypeFilter);
-
-            // Size filter
-            const matchesSize = matchesSizeFilter(doc.sizeBytes, sizeFilter);
-
-            // Status filter
-            const matchesStatus = !statusFilter || doc.status === statusFilter;
-
-            return matchesContentType && matchesSize && matchesStatus;
-        });
-
-        displayDocuments(filtered);
-    } catch (error) {
-        console.error('Error during search:', error);
-        // Fallback to client-side filtering on error
-        console.warn('⚠️ Elasticsearch search failed, falling back to client-side filtering');
-        clientSideFilter();
+        // Hide search indicator
+        if (searchIndicator) {
+            searchIndicator.classList.add('hidden');
+        }
     }
-}
 
-// Fallback client-side filtering (for when Elasticsearch is unavailable)
-function clientSideFilter() {
-    if (!allDocuments || !documentsTbody) return;
-
-    const searchTerm = searchInput?.value.toLowerCase() || '';
-    const contentTypeFilter = filterContentType?.value || '';
-    const sizeFilter = filterSize?.value || '';
-    const statusFilter = filterStatus?.value || '';
-
-    const filtered = allDocuments.filter(doc => {
-        // Client-side search filter - search across metadata fields
-        const matchesSearch = !searchTerm ||
-            doc.title.toLowerCase().includes(searchTerm) ||
-            doc.originalFilename.toLowerCase().includes(searchTerm) ||
-            doc.contentType.toLowerCase().includes(searchTerm) ||
-            doc.status.toLowerCase().includes(searchTerm) ||
-            formatBytes(doc.sizeBytes).toLowerCase().includes(searchTerm) ||
-            (doc.id && doc.id.toLowerCase().includes(searchTerm)) ||
-            (doc.tags && doc.tags.some(tag => tag.toLowerCase().includes(searchTerm)));
-
+    // Apply client-side filters (content type, size, status)
+    const filtered = documentsToDisplay.filter(doc => {
         // Content type filter
         const matchesContentType = !contentTypeFilter ||
             doc.contentType.startsWith(contentTypeFilter);
@@ -207,18 +169,12 @@ function clientSideFilter() {
         // Status filter
         const matchesStatus = !statusFilter || doc.status === statusFilter;
 
-        return matchesSearch && matchesContentType && matchesSize && matchesStatus;
+        return matchesContentType && matchesSize && matchesStatus;
     });
 
     displayDocuments(filtered);
 }
 
-/**
- * Checks if a document's size matches the specified filter.
- * @param {number} sizeBytes - The document size in bytes
- * @param {string} filter - The size filter ('small', 'medium', 'large', or '')
- * @returns {boolean} Whether the size matches the filter
- */
 function matchesSizeFilter(sizeBytes, filter) {
     if (!filter) return true;
     
