@@ -15,7 +15,8 @@ import java.util.List;
 
 
 @RestController
-@RequestMapping("/api/documents/search")
+@RequestMapping("/v1/documents")
+@CrossOrigin(origins = "*")
 @Tag(name = "Document Search", description = "Endpoints for searching documents using full-text search")
 public class DocumentSearchController {
     
@@ -28,7 +29,7 @@ public class DocumentSearchController {
     }
     
 
-    @GetMapping
+    @GetMapping("/search")
     @Operation(summary = "Search documents", 
                description = "Search documents by query string in both title and content fields")
     public ResponseEntity<List<DocumentSearchDto>> searchDocuments(
@@ -52,8 +53,8 @@ public class DocumentSearchController {
         }
     }
 
-    @GetMapping("/fuzzy")
-    @Operation(summary = "Fuzzy search documents", 
+    @GetMapping("/search/fuzzy")
+    @Operation(summary = "Fuzzy search documents",
                description = "Fuzzy search documents in both title and content fields. Handles typos and misspellings. "
                            + "Fuzziness values: 0 (exact), 1 (1 char difference), 2 (2 chars), AUTO (recommended)")
     public ResponseEntity<List<DocumentSearchDto>> fuzzySearchDocuments(

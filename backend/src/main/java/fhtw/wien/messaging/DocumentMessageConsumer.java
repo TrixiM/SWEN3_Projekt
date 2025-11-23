@@ -2,6 +2,7 @@ package fhtw.wien.messaging;
 
 import static fhtw.wien.config.MessagingConstants.*;
 import fhtw.wien.domain.Document;
+import fhtw.wien.dto.DocumentResponse;
 import fhtw.wien.dto.SummaryResultDto;
 import fhtw.wien.exception.MessagingException;
 import fhtw.wien.repo.DocumentRepo;
@@ -27,6 +28,16 @@ public class DocumentMessageConsumer {
         this.rabbitTemplate = rabbitTemplate;
         this.documentRepo = documentRepo;
         this.idempotencyService = idempotencyService;
+    }
+
+    @RabbitListener(queues = DOCUMENT_CREATED_ACK_QUEUE)
+    public void handleDocumentCreatedAck(DocumentResponse document) {
+        log.info("✅ OCR worker acknowledged document creation: {} - '{}'", document.id(), document.title());
+    }
+
+    @RabbitListener(queues = DOCUMENT_DELETED_ACK_QUEUE)
+    public void handleDocumentDeletedAck(String ackMessage) {
+        log.info("✅ Received deletion acknowledgment: {}", ackMessage);
     }
 
     @RabbitListener(queues = DOCUMENT_DELETED_QUEUE)

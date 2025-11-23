@@ -41,9 +41,7 @@ public class DocumentSearchService {
                     .or("title").contains(queryString);
             
             CriteriaQuery criteriaQuery = new CriteriaQuery(criteria);
-            criteriaQuery.addSourceFilter(new FetchSourceFilter(new String[]{"documentId", "title", "totalCharacters", 
-                            "totalPages", "language", "confidence", "indexedAt", "processedAt"}, 
-                            new String[]{"content"}));
+            // Fetch all fields including content for snippet generation
             
             org.springframework.data.elasticsearch.core.query.Query query = criteriaQuery;
             
@@ -68,26 +66,26 @@ public class DocumentSearchService {
         log.info("🔍 Fuzzy searching documents for: '{}' with fuzziness: {}", queryString, fuzziness);
         
         try {
-            // Build Elasticsearch fuzzy query using native query builders
-            Query contentFuzzy = FuzzyQuery.of(f -> f
-                    .field("content")
-                    .value(queryString)
-                    .fuzziness(fuzziness))._toQuery();
-            
+            // Build fuzzy queries with field boosting (title is 2x more important than content)
             Query titleFuzzy = FuzzyQuery.of(f -> f
                     .field("title")
                     .value(queryString)
-                    .fuzziness(fuzziness))._toQuery();
+                    .fuzziness(fuzziness)
+                    .boost(2.0f))._toQuery();
+            
+            Query contentFuzzy = FuzzyQuery.of(f -> f
+                    .field("content")
+                    .value(queryString)
+                    .fuzziness(fuzziness)
+                    .boost(1.0f))._toQuery();
             
             Query boolQuery = BoolQuery.of(b -> b
-                    .should(contentFuzzy)
-                    .should(titleFuzzy))._toQuery();
+                    .should(titleFuzzy)
+                    .should(contentFuzzy))._toQuery();
             
             NativeQuery nativeQuery = NativeQuery.builder()
                     .withQuery(boolQuery)
-                    .withSourceFilter(new FetchSourceFilter(new String[]{"documentId", "title", "totalCharacters", 
-                            "totalPages", "language", "confidence", "indexedAt", "processedAt"}, 
-                            new String[]{"content"}))
+                    // Fetch all fields including content for snippet generation
                     .build();
             
             SearchHits<DocumentIndex> searchHits = elasticsearchOperations.search(nativeQuery, DocumentIndex.class);

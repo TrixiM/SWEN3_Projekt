@@ -19,10 +19,11 @@ public record DocumentSearchDto(
     public static DocumentSearchDto from(UUID documentId, String title, String content, 
                                         int totalCharacters, int totalPages, String language, 
                                         int confidence, Instant indexedAt, Instant processedAt) {
-        // Create a snippet of max 200 characters
-        String snippet = content != null && content.length() > 200 
-                ? content.substring(0, 200) + "..." 
-                : content;
+        // Create a snippet from content if available (null when source filtering is applied)
+        String snippet = null;
+        if (content != null) {
+            snippet = content.length() > 200 ? content.substring(0, 200) + "..." : content;
+        }
         
         return new DocumentSearchDto(
                 documentId,
