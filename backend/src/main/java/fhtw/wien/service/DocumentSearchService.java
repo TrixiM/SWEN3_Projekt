@@ -68,11 +68,41 @@ public class DocumentSearchService {
                     .build();
             
             SearchHits<DocumentIndex> searchHits = elasticsearchOperations.search(nativeQuery, DocumentIndex.class);
-            
+
+            /*if (searchHits.isEmpty()) { //funktioniert nd, ziel ist es aber traditionellen full text search zu machen wenn fuzzy keine ergebnisse liefert
+                log.info("No fuzzy results, trying full-text search...");
+
+                Query titleFullText = Query.of(q -> q
+                        .match(m -> m
+                                .field("title")
+                                .query(queryString)
+                                .boost(2.0f)
+                        )
+                );
+
+                Query contentFullText = Query.of(q -> q
+                        .match(m -> m
+                                .field("content")
+                                .query(queryString)
+                                .boost(1.0f)
+                        )
+                );
+
+                Query boolFullText = BoolQuery.of(b -> b
+                        .should(titleFullText)
+                        .should(contentFullText)
+                )._toQuery();
+
+                searchHits = elasticsearchOperations.search(
+                        NativeQuery.builder().withQuery(boolFullText).build(),
+                        DocumentIndex.class
+                );
+            }*/
+
             List<DocumentIndex> documents = searchHits.stream()
                     .map(SearchHit::getContent)
                     .collect(Collectors.toList());
-            
+
             List<DocumentSearchDto> results = mapToSearchDtos(documents);
             log.info("✅ Found {} fuzzy results for query: '{}'", results.size(), queryString);
             return results;

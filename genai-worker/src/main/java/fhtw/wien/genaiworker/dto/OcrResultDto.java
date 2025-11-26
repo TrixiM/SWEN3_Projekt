@@ -24,9 +24,12 @@ public record OcrResultDto(
     public boolean isSuccess() {
         return "SUCCESS".equals(status);
     }
+    public boolean minimumTotalCharactersForSummary() {
+        return totalCharacters >= 50;
+    }
     public boolean hasValidText() {
         return extractedText != null && 
-               !extractedText.trim().isEmpty() && 
-               totalCharacters > 50;
+               !extractedText.trim().isEmpty() &&
+               totalCharacters > 0;
     }
 }

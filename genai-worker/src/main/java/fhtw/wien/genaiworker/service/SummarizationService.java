@@ -38,6 +38,14 @@ public class SummarizationService {
                     System.currentTimeMillis() - startTime
             );
         }
+        if(!ocrMessage.minimumTotalCharactersForSummary()){
+            return SummaryResultMessage.success(
+                    ocrMessage.documentId(),
+                    ocrMessage.documentTitle(),
+                    ocrMessage.extractedText(),
+                    0
+            );
+        }
 
         try {
             // Generate summary (retry/circuit breaker handled by GeminiService)
