@@ -33,8 +33,7 @@ public class DocumentSearchService {
     
  
      public List<DocumentSearchDto> search(String queryString) {
-        // Delegate to fuzzy search with AUTO fuzziness so that plain /search is always
-        // full-text and typo-tolerant as well.
+
         log.info("🔍 Delegating exact search to fuzzy search for query: '{}'", queryString);
         return fuzzySearch(queryString, "AUTO");
     }
@@ -69,35 +68,6 @@ public class DocumentSearchService {
             
             SearchHits<DocumentIndex> searchHits = elasticsearchOperations.search(nativeQuery, DocumentIndex.class);
 
-            /*if (searchHits.isEmpty()) { //funktioniert nd, ziel ist es aber traditionellen full text search zu machen wenn fuzzy keine ergebnisse liefert
-                log.info("No fuzzy results, trying full-text search...");
-
-                Query titleFullText = Query.of(q -> q
-                        .match(m -> m
-                                .field("title")
-                                .query(queryString)
-                                .boost(2.0f)
-                        )
-                );
-
-                Query contentFullText = Query.of(q -> q
-                        .match(m -> m
-                                .field("content")
-                                .query(queryString)
-                                .boost(1.0f)
-                        )
-                );
-
-                Query boolFullText = BoolQuery.of(b -> b
-                        .should(titleFullText)
-                        .should(contentFullText)
-                )._toQuery();
-
-                searchHits = elasticsearchOperations.search(
-                        NativeQuery.builder().withQuery(boolFullText).build(),
-                        DocumentIndex.class
-                );
-            }*/
 
             List<DocumentIndex> documents = searchHits.stream()
                     .map(SearchHit::getContent)

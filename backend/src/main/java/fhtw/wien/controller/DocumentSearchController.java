@@ -30,8 +30,6 @@ public class DocumentSearchController {
     
 
     @GetMapping("/search")
-    @Operation(summary = "Search documents", 
-               description = "Search documents by query string in both title and content fields")
     public ResponseEntity<List<DocumentSearchDto>> searchDocuments(
             @Parameter(description = "Search query string", required = true)
             @RequestParam String q) {
