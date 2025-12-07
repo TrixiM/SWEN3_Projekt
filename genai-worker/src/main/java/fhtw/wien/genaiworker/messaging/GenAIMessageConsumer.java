@@ -32,19 +32,17 @@ public class GenAIMessageConsumer {
 
     @RabbitListener(queues = RabbitMQConfig.OCR_COMPLETED_QUEUE, containerFactory = "rabbitListenerContainerFactory")
     public void handleOcrCompleted(OcrResultDto message) {
-        log.info("🤖 Summarization started: id={}, chars={}", message.documentId(), message.totalCharacters());
+        log.info("Summarization started: id={}, chars={}", message.documentId(), message.totalCharacters());
         
         // Check if already processed
         if (idempotencyService.isAlreadyProcessed(message.messageId())) {
-            log.info("⏭️ Skipping duplicate: {}", message.documentId());
+            log.info("⏭Skipping duplicate: {}", message.documentId());
             return;
         }
 
         try {
-            // Process summarization synchronously
             SummaryResultMessage result = summarizationService.processSummarization(message);
             
-            // Mark as processed only if successful
             if (result.isSuccess()) {
                 idempotencyService.markAsProcessed(message.messageId());
             }

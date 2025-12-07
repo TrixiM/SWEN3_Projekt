@@ -102,12 +102,4 @@ public record OcrResultDto(
         return "SUCCESS".equals(status);
     }
 
-    public String getSummary() {
-        if (isSuccess()) {
-            return String.format("OCR Success: %d characters extracted from %d pages (confidence: %d%%, time: %dms)",
-                    totalCharacters, totalPages, overallConfidence, processingTimeMs);
-        } else {
-            return String.format("OCR Failed: %s (time: %dms)", errorMessage, processingTimeMs);
-        }
-    }
 }

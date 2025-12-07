@@ -14,20 +14,16 @@ import java.util.Optional;
 public class SummarizationService {
 
     private static final Logger log = LoggerFactory.getLogger(SummarizationService.class);
-
     private final GeminiService geminiService;
-
     public SummarizationService(GeminiService geminiService) {
         this.geminiService = geminiService;
     }
 
 
-    // Synchronous processing - RabbitMQ listener handles concurrency with multiple threads
     public SummaryResultMessage processSummarization(OcrResultDto ocrMessage) {
 
         long startTime = System.currentTimeMillis();
 
-        // Validate OCR result
         Optional<String> validationError = validateOcrResult(ocrMessage);
         if (validationError.isPresent()) {
             log.warn("⚠️ Validation failed: {}", validationError.get());
@@ -48,7 +44,6 @@ public class SummarizationService {
         }
 
         try {
-            // Generate summary (retry/circuit breaker handled by GeminiService)
             String summary = geminiService.generateSummary(ocrMessage.extractedText());
 
             long processingTime = System.currentTimeMillis() - startTime;
