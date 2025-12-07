@@ -4,39 +4,38 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-
 @Service
 public class IdempotencyService {
-    
+
     private static final Logger log = LoggerFactory.getLogger(IdempotencyService.class);
+    private static final Duration TTL = Duration.ofHours(24);
+
     private final Map<String, Instant> processedMessages = new ConcurrentHashMap<>();
-    private static final long TTL_HOURS = 24;
-    
+
     public boolean tryMarkAsProcessed(String messageId) {
-        cleanupExpiredEntries();
-        
-        Instant previousValue = processedMessages.putIfAbsent(messageId, Instant.now());
-        
-        if (previousValue != null) {
-            log.warn("⚠️ Duplicate message detected and rejected: {}", messageId);
+        if (messageId == null || messageId.isBlank()) {
+            log.warn("Cannot mark empty message id as processed");
             return false;
         }
-        
-        log.debug("✅ Message can be processed: {}", messageId);
+
+        cleanupExpiredEntries();
+
+        Instant previousValue = processedMessages.putIfAbsent(messageId, Instant.now());
+        if (previousValue != null) {
+            log.warn("Duplicate message ignored: {}", messageId);
+            return false;
+        }
+
         return true;
     }
-    
+
     private void cleanupExpiredEntries() {
-        Instant expirationTime = Instant.now().minus(TTL_HOURS, ChronoUnit.HOURS);
+        Instant expirationTime = Instant.now().minus(TTL);
         processedMessages.entrySet().removeIf(entry -> entry.getValue().isBefore(expirationTime));
-    }
-    
-    public int getCacheSize() {
-        return processedMessages.size();
     }
 }

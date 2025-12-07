@@ -14,59 +14,49 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-
 @Service
 public class UnifiedOcrService {
-    
+
     private static final Logger log = LoggerFactory.getLogger(UnifiedOcrService.class);
-    
+
     private final OcrConfig ocrConfig;
     private final FileTypeDetector fileTypeDetector;
     private final PdfConverterService pdfConverterService;
     private final TesseractOcrService tesseractOcrService;
     private final MinIOClientService minioClientService;
-    
+
     public UnifiedOcrService(
             OcrConfig ocrConfig,
             FileTypeDetector fileTypeDetector,
             PdfConverterService pdfConverterService,
             TesseractOcrService tesseractOcrService,
             MinIOClientService minioClientService) {
-        
+
         this.ocrConfig = ocrConfig;
         this.fileTypeDetector = fileTypeDetector;
         this.pdfConverterService = pdfConverterService;
         this.tesseractOcrService = tesseractOcrService;
         this.minioClientService = minioClientService;
     }
-    
 
     public OcrResultDto processDocument(Document document) {
+        validateDocument(document);
         long startTime = System.currentTimeMillis();
-        
-        try {
-            // Validate document
-            validateDocument(document);
-            
-            // Download document from MinIO
-            byte[] documentData = minioClientService.downloadDocument(document.objectKey());
 
-            // Detect file type
+        try {
+            byte[] documentData = minioClientService.downloadDocument(document.objectKey());
             FileTypeDetector.FileType fileType = detectFileType(document, documentData);
 
-            // Process based on file type
-            OcrResultDto result = switch (fileType) {
+            return switch (fileType) {
                 case PDF -> processPdfDocument(document, documentData, startTime);
                 case IMAGE -> processImageDocument(document, documentData, startTime);
                 case UNSUPPORTED -> createUnsupportedFileResult(document, startTime);
             };
 
-            return result;
-            
         } catch (Exception e) {
             long processingTime = System.currentTimeMillis() - startTime;
-            log.error("OCR processing failed for document: {}", document.id(), e);
-            
+            log.error("OCR processing failed for document {}", document.id(), e);
+
             return OcrResultDto.failure(
                     document.id(),
                     document.title(),
@@ -75,93 +65,80 @@ public class UnifiedOcrService {
             );
         }
     }
-    
 
     private void validateDocument(Document document) {
         if (document == null) {
             throw new IllegalArgumentException("Document cannot be null");
         }
-        
         if (document.id() == null) {
             throw new IllegalArgumentException("Document ID cannot be null");
         }
-        
-        if (document.objectKey() == null || document.objectKey().trim().isEmpty()) {
+        if (document.objectKey() == null || document.objectKey().isBlank()) {
             throw new IllegalArgumentException("Document object key cannot be null or empty");
         }
-        
         if (!fileTypeDetector.isSupportedContentType(document.contentType())) {
             log.warn("Unsupported content type for document {}: {}", document.id(), document.contentType());
         }
     }
 
     private FileTypeDetector.FileType detectFileType(Document document, byte[] documentData) throws IOException {
-        // Detect file type using magic number analysis
+        FileTypeDetector.FileType fileType = fileTypeDetector.getFileTypeFromContentType(document.contentType());
+        if (fileType != FileTypeDetector.FileType.UNSUPPORTED) {
+            return fileType;
+        }
+
         try (ByteArrayInputStream inputStream = new ByteArrayInputStream(documentData)) {
             return fileTypeDetector.detectFileType(inputStream);
         }
     }
-    
 
     private OcrResultDto processPdfDocument(Document document, byte[] pdfData, long startTime)
             throws IOException, TesseractException {
-        
-        // Convert PDF pages to images
+
         List<byte[]> pageImages = pdfConverterService.convertPdfToImages(pdfData);
-        
         if (pageImages.isEmpty()) {
             throw new IOException("PDF contains no processable pages");
         }
-        
+
         List<OcrResultDto.PageResult> pageResults = new ArrayList<>();
         StringBuilder fullText = new StringBuilder();
         int totalConfidence = 0;
-        
+
         for (int i = 0; i < pageImages.size(); i++) {
             int pageNumber = i + 1;
             long pageStartTime = System.currentTimeMillis();
-            
+
             try {
-                // Extract text with confidence
-                TesseractOcrService.OcrResult ocrResult = tesseractOcrService.extractTextWithConfidence(
+                TesseractOcrService.OcrResult ocrResult = tesseractOcrService.extractText(
                         pageImages.get(i), ocrConfig.getDefaultLanguage());
-                
+
                 long pageProcessingTime = System.currentTimeMillis() - pageStartTime;
-                
-                // Create page result
-                OcrResultDto.PageResult pageResult = OcrResultDto.fromTesseractResult(
-                        pageNumber, 
-                        ocrResult.getText(), 
-                        ocrResult.getConfidence(),
+                pageResults.add(OcrResultDto.fromTesseractResult(
+                        pageNumber,
+                        ocrResult.text(),
+                        ocrResult.confidence(),
                         pageProcessingTime
-                );
-                
-                pageResults.add(pageResult);
-                
-                // Append to full text
-                if (!ocrResult.getText().isEmpty()) {
+                ));
+
+                if (!ocrResult.text().isEmpty()) {
                     if (fullText.length() > 0) {
                         fullText.append("\n\n--- Page ").append(pageNumber).append(" ---\n");
                     }
-                    fullText.append(ocrResult.getText());
+                    fullText.append(ocrResult.text());
                 }
-                
-                totalConfidence += ocrResult.getConfidence();
-                
+
+                totalConfidence += ocrResult.confidence();
+
             } catch (Exception e) {
                 log.error("Failed to process page {} of document {}", pageNumber, document.id(), e);
-                
-                // Add failed page result
-                OcrResultDto.PageResult failedPageResult = new OcrResultDto.PageResult(
-                        pageNumber, "", 0, 0, false, System.currentTimeMillis() - pageStartTime);
-                pageResults.add(failedPageResult);
+                pageResults.add(new OcrResultDto.PageResult(pageNumber, "", 0, 0, false,
+                        System.currentTimeMillis() - pageStartTime));
             }
         }
-        
-        // Calculate overall confidence
+
         int overallConfidence = pageResults.isEmpty() ? 0 : totalConfidence / pageResults.size();
         long totalProcessingTime = System.currentTimeMillis() - startTime;
-        
+
         return OcrResultDto.success(
                 document.id(),
                 document.title(),
@@ -172,38 +149,34 @@ public class UnifiedOcrService {
                 totalProcessingTime
         );
     }
-    
 
     private OcrResultDto processImageDocument(Document document, byte[] imageData, long startTime)
             throws IOException, TesseractException {
-        
-        // Extract text with confidence
-        TesseractOcrService.OcrResult ocrResult = tesseractOcrService.extractTextWithConfidence(
+
+        TesseractOcrService.OcrResult ocrResult = tesseractOcrService.extractText(
                 imageData, ocrConfig.getDefaultLanguage());
-        
+
         long processingTime = System.currentTimeMillis() - startTime;
-        
-        // Create single page result
         OcrResultDto.PageResult pageResult = OcrResultDto.fromTesseractResult(
-                1, ocrResult.getText(), ocrResult.getConfidence(), processingTime);
-        
+                1, ocrResult.text(), ocrResult.confidence(), processingTime);
+
         return OcrResultDto.success(
                 document.id(),
                 document.title(),
-                ocrResult.getText(),
+                ocrResult.text(),
                 List.of(pageResult),
                 ocrConfig.getDefaultLanguage(),
-                ocrResult.getConfidence(),
+                ocrResult.confidence(),
                 processingTime
         );
     }
 
     private OcrResultDto createUnsupportedFileResult(Document document, long startTime) {
         long processingTime = System.currentTimeMillis() - startTime;
-        
-        String errorMessage = String.format("Unsupported file type: %s. %s", 
+
+        String errorMessage = String.format("Unsupported file type: %s. %s",
                 document.contentType(), fileTypeDetector.getSupportedTypesDescription());
-        
+
         return OcrResultDto.failure(
                 document.id(),
                 document.title(),

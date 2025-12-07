@@ -8,22 +8,21 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class OcrProcessingService {
-    
+
     private static final Logger log = LoggerFactory.getLogger(OcrProcessingService.class);
-    
+
     private final UnifiedOcrService unifiedOcrService;
-    
+
     public OcrProcessingService(UnifiedOcrService unifiedOcrService) {
         this.unifiedOcrService = unifiedOcrService;
     }
 
     public OcrResultDto processDocument(Document document) {
-        log.info("Processing: id={}, file='{}'", document.id(), document.title());
-        
+        log.info("Processing document {} ({})", document.id(), document.title());
         try {
             return unifiedOcrService.processDocument(document);
         } catch (Exception e) {
-            log.error(" OCR failed: {}", document.id(), e);
+            log.error("OCR failed for {}", document.id(), e);
             return OcrResultDto.failure(document.id(), document.title(), "OCR error: " + e.getMessage(), 0L);
         }
     }

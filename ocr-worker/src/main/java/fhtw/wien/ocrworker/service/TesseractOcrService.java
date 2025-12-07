@@ -2,9 +2,10 @@ package fhtw.wien.ocrworker.service;
 
 import fhtw.wien.ocrworker.config.OcrConfig;
 import net.sourceforge.tess4j.ITesseract;
+import net.sourceforge.tess4j.ITessAPI.TessPageIteratorLevel;
 import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.tess4j.TesseractException;
-import net.sourceforge.tess4j.util.ImageHelper;
+import net.sourceforge.tess4j.Word;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -13,129 +14,97 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
-
 
 @Service
 public class TesseractOcrService {
-    
+
     private static final Logger log = LoggerFactory.getLogger(TesseractOcrService.class);
-    
+
     private final OcrConfig ocrConfig;
     private final ITesseract tesseract;
-    
+
     public TesseractOcrService(OcrConfig ocrConfig) {
         this.ocrConfig = ocrConfig;
-        this.tesseract = initializeTesseract();
+        this.tesseract = createTesseract();
     }
 
-
-
-    public OcrResult extractTextWithConfidence(byte[] imageData, String language) throws TesseractException, IOException {
+    public OcrResult extractText(byte[] imageData, String language) throws TesseractException, IOException {
         if (imageData == null || imageData.length == 0) {
             throw new IllegalArgumentException("Image data cannot be null or empty");
         }
 
-        if (language == null || language.trim().isEmpty()) {
-            language = ocrConfig.getDefaultLanguage();
-        }
-
-        log.debug("Extracting text from image: size={} bytes, language={}", imageData.length, language);
+        String resolvedLanguage = (language == null || language.isBlank())
+                ? ocrConfig.getDefaultLanguage()
+                : language.trim();
 
         try (ByteArrayInputStream inputStream = new ByteArrayInputStream(imageData)) {
             BufferedImage image = ImageIO.read(inputStream);
-
             if (image == null) {
                 throw new IOException("Failed to read image data");
             }
 
             String extractedText;
             long processingTime;
-            int confidence = 75;
+            int confidence;
 
             synchronized (tesseract) {
-                tesseract.setLanguage(language);
+                tesseract.setLanguage(resolvedLanguage);
                 long startTime = System.currentTimeMillis();
                 extractedText = tesseract.doOCR(image);
                 processingTime = System.currentTimeMillis() - startTime;
-
+                confidence = calculateConfidence(image);
             }
 
-            OcrResult result = new OcrResult(
-                    extractedText != null ? extractedText.trim() : "",
-                    confidence,
-                    language,
-                    processingTime,
-                    confidence >= ocrConfig.getMinConfidenceThreshold()
-            );
+            String cleanedText = extractedText == null ? "" : extractedText.trim();
+            if (cleanedText.isEmpty()) {
+                confidence = 0;
+            }
 
-            log.debug("OCR completed in {}ms, characters: {}", processingTime, result.getText().length());
-
-            return result;
-
-        } catch (TesseractException e) {
-            log.error("Tesseract OCR failed for language: {}", language, e);
-            throw e;
-        } catch (IOException e) {
-            log.error("Failed to read image data for OCR", e);
+            log.debug("OCR completed in {} ms ({} chars)", processingTime, cleanedText.length());
+            return new OcrResult(cleanedText, confidence, resolvedLanguage, processingTime);
+        } catch (TesseractException | IOException e) {
+            log.error("Tesseract OCR failed (language={})", resolvedLanguage, e);
             throw e;
         }
     }
 
-    private ITesseract initializeTesseract() {
-        log.info("Initializing Tesseract OCR with config: language={}, engine_mode={}, psm={}", 
-                ocrConfig.getDefaultLanguage(), ocrConfig.getOcrEngineMode(), ocrConfig.getPageSegMode());
-        
+    private int calculateConfidence(BufferedImage image) throws TesseractException {
+        var words = tesseract.getWords(image, TessPageIteratorLevel.RIL_WORD);
+        if (words == null || words.isEmpty()) {
+            return 0;
+        }
+        int total = 0;
+        for (Word word : words) {
+            total += word.getConfidence();
+        }
+        return total / words.size();
+    }
+
+    private ITesseract createTesseract() {
         ITesseract instance = new Tesseract();
-        
-        if (ocrConfig.getTesseractPath() != null && !ocrConfig.getTesseractPath().trim().isEmpty()) {
-            instance.setTessVariable("tessedit_char_whitelist", "");
-            log.debug("Tesseract path: {}", ocrConfig.getTesseractPath());
-        }
-        
-        if (ocrConfig.getTessdataPath() != null && !ocrConfig.getTessdataPath().trim().isEmpty()) {
+
+        if (ocrConfig.getTessdataPath() != null && !ocrConfig.getTessdataPath().isBlank()) {
             instance.setDatapath(ocrConfig.getTessdataPath());
-            log.debug("Tessdata path: {}", ocrConfig.getTessdataPath());
+            log.info("Using custom tessdata path: {}", ocrConfig.getTessdataPath());
+        } else {
+            log.info("Using system tessdata (TESSDATA_PREFIX) and default Tesseract install path");
         }
-        
+
         instance.setLanguage(ocrConfig.getDefaultLanguage());
         instance.setOcrEngineMode(ocrConfig.getOcrEngineMode());
         instance.setPageSegMode(ocrConfig.getPageSegMode());
-        
-        instance.setTessVariable("tessedit_pageseg_mode", String.valueOf(ocrConfig.getPageSegMode()));
-        instance.setTessVariable("tessedit_ocr_engine_mode", String.valueOf(ocrConfig.getOcrEngineMode()));
-        
-        log.info("Tesseract OCR initialized successfully");
         return instance;
     }
-    
 
-    public static class OcrResult {
-        private final String text;
-        private final int confidence;
-        private final String language;
-        private final long processingTimeMs;
-        private final boolean isHighConfidence;
-        
-        public OcrResult(String text, int confidence, String language, long processingTimeMs, boolean isHighConfidence) {
-            this.text = text;
-            this.confidence = confidence;
-            this.language = language;
-            this.processingTimeMs = processingTimeMs;
-            this.isHighConfidence = isHighConfidence;
-        }
-        
-        public String getText() { return text; }
-        public int getConfidence() { return confidence; }
-        public String getLanguage() { return language; }
-        public long getProcessingTimeMs() { return processingTimeMs; }
-        public boolean isHighConfidence() { return isHighConfidence; }
-        
+    public record OcrResult(String text, int confidence, String language, long processingTimeMs) {
         @Override
         public String toString() {
-            return String.format("OcrResult{text='%s...', confidence=%d%%, language='%s', time=%dms, highConfidence=%s}",
-                    text.length() > 50 ? text.substring(0, 50) : text,
-                    confidence, language, processingTimeMs, isHighConfidence);
+            String preview = text == null ? "" : text;
+            if (preview.length() > 50) {
+                preview = preview.substring(0, 50);
+            }
+            return "OcrResult{text='" + preview + "', confidence=" + confidence +
+                    "%, language='" + language + "', time=" + processingTimeMs + "ms}";
         }
     }
 }

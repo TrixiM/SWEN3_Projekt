@@ -22,8 +22,10 @@ public class OcrMessageConsumer {
     private final IdempotencyService idempotencyService;
     private final ElasticsearchService elasticsearchService;
 
-    public OcrMessageConsumer(RabbitTemplate rabbitTemplate, OcrProcessingService ocrProcessingService,
-                              IdempotencyService idempotencyService, ElasticsearchService elasticsearchService) {
+    public OcrMessageConsumer(RabbitTemplate rabbitTemplate,
+                              OcrProcessingService ocrProcessingService,
+                              IdempotencyService idempotencyService,
+                              ElasticsearchService elasticsearchService) {
         this.rabbitTemplate = rabbitTemplate;
         this.ocrProcessingService = ocrProcessingService;
         this.idempotencyService = idempotencyService;
@@ -33,31 +35,26 @@ public class OcrMessageConsumer {
     @RabbitListener(queues = RabbitMQConfig.DOCUMENT_CREATED_QUEUE)
     public void handleDocumentCreated(Document document) {
         log.info("OCR started: id={}, file='{}'", document.id(), document.originalFilename());
-        
-        // Idempotency check
+
         String messageId = "ocr-doc-" + document.id();
         if (!idempotencyService.tryMarkAsProcessed(messageId)) {
-            log.info("⏭Skipping duplicate: {}", document.id());
+            log.info("Skipping duplicate message for {}", document.id());
             return;
         }
-        
+
         OcrResultDto ocrResult = ocrProcessingService.processDocument(document);
-        
-        log.info("OCR done: id={}, chars={}", document.id(), ocrResult.totalCharacters());
-        
-        // Index document in Elasticsearch if OCR was successful
+        log.info("OCR done: id={}, chars={}, status={}", document.id(), ocrResult.totalCharacters(), ocrResult.status());
+
         if (ocrResult.isSuccess() && ocrResult.extractedText() != null && !ocrResult.extractedText().isEmpty()) {
             try {
                 elasticsearchService.indexDocument(ocrResult);
             } catch (Exception e) {
-                log.error("Elasticsearch indexing failed: {}", document.id(), e);
+                log.error("Elasticsearch indexing failed for {}", document.id(), e);
             }
         }
-        
-        // Send OCR result to GenAI worker for summarization
+
         sendOcrCompletionMessage(ocrResult);
     }
-    
 
     private void sendOcrCompletionMessage(OcrResultDto ocrResult) {
         try {
@@ -68,7 +65,7 @@ public class OcrMessageConsumer {
             );
             log.info("Sent OCR result to GenAI: id={}, status={}", ocrResult.documentId(), ocrResult.status());
         } catch (Exception e) {
-            log.error(" Failed to send OCR result: {}", ocrResult.documentId(), e);
+            log.error("Failed to send OCR result for {}", ocrResult.documentId(), e);
         }
     }
 }

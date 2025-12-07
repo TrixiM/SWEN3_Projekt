@@ -9,18 +9,18 @@ import java.util.UUID;
 
 @Service
 public class ElasticsearchService {
-    
+
     private static final Logger log = LoggerFactory.getLogger(ElasticsearchService.class);
-    
+
     private final DocumentIndexRepository repository;
-    
+
     public ElasticsearchService(DocumentIndexRepository repository) {
         this.repository = repository;
     }
 
     public DocumentIndex indexDocument(OcrResultDto ocrResult) {
-        log.debug("📇 Indexing document {} into Elasticsearch", ocrResult.documentId());
-        
+        log.debug("Indexing document {} into Elasticsearch", ocrResult.documentId());
+
         try {
             DocumentIndex documentIndex = new DocumentIndex(
                     ocrResult.documentId(),
@@ -32,21 +32,20 @@ public class ElasticsearchService {
                     ocrResult.overallConfidence(),
                     ocrResult.processedAt()
             );
-            
+
             return repository.save(documentIndex);
         } catch (Exception e) {
-            log.error("❌ Failed to index document {}: {}", ocrResult.documentId(), e.getMessage(), e);
+            log.error("Failed to index document {}", ocrResult.documentId(), e);
             throw new RuntimeException("Failed to index document", e);
         }
     }
-    
 
     public void deleteDocument(UUID documentId) {
-        log.debug("🗑️ Deleting document {} from Elasticsearch", documentId);
+        log.debug("Deleting document {} from Elasticsearch", documentId);
         try {
             repository.deleteById(documentId.toString());
         } catch (Exception e) {
-            log.error("❌ Failed to delete document {}: {}", documentId, e.getMessage(), e);
+            log.error("Failed to delete document {}", documentId, e);
             throw new RuntimeException("Failed to delete document", e);
         }
     }
