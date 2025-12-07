@@ -3,10 +3,8 @@ package fhtw.wien.service;
 import fhtw.wien.business.DocumentBusinessLogic;
 import fhtw.wien.business.PdfRenderingBusinessLogic;
 import fhtw.wien.domain.Document;
-import fhtw.wien.dto.DocumentResponse;
 import fhtw.wien.exception.ServiceException;
 import fhtw.wien.messaging.DocumentMessageProducer;
-import fhtw.wien.util.DocumentMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -51,8 +49,7 @@ public class DocumentService {
             Document created = documentBusinessLogic.createOrUpdateDocument(doc, pdfStream);
             
             // Publish message after document is created
-            DocumentResponse response = DocumentMapper.toResponse(created);
-            messageProducer.publishDocumentCreated(response);
+            messageProducer.publishDocumentCreated(created);
             
             return created;
         } catch (Exception e) {
@@ -65,8 +62,6 @@ public class DocumentService {
         try {
             Document updated = documentBusinessLogic.createOrUpdateDocument(doc, null);
             
-            // Publish message after document is updated
-            DocumentResponse response = DocumentMapper.toResponse(updated);
             log.debug("Document updated: id={}", updated.getId());
             
             return updated;

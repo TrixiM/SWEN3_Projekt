@@ -1,8 +1,6 @@
 package fhtw.wien.integration;
 
 import fhtw.wien.domain.Document;
-import fhtw.wien.domain.DocumentStatus;
-import fhtw.wien.dto.DocumentResponse;
 import fhtw.wien.repo.DocumentRepo;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -10,7 +8,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.*;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -20,19 +17,12 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Integration test for the complete document upload workflow.
- * Uses TestContainers for PostgreSQL and H2 in-memory database.
- * 
- * Note: MinIO is mocked in this test. For full integration testing with MinIO,
- * add a MinIO TestContainer.
- */
+
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
 class DocumentUploadIntegrationTest {
@@ -82,24 +72,24 @@ class DocumentUploadIntegrationTest {
         HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 
         // When: Upload document
-        ResponseEntity<DocumentResponse> uploadResponse = restTemplate.postForEntity(
+        ResponseEntity<Document> uploadResponse = restTemplate.postForEntity(
                 baseUrl,
                 requestEntity,
-                DocumentResponse.class
+                Document.class
         );
 
         // Then: Should return 201 Created
         assertThat(uploadResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(uploadResponse.getHeaders().getLocation()).isNotNull();
 
-        DocumentResponse createdDocument = uploadResponse.getBody();
+        Document createdDocument = uploadResponse.getBody();
         assertNotNull(createdDocument);
-        assertNotNull(createdDocument.id());
-        assertEquals("Integration Test Document", createdDocument.title());
-        assertThat(createdDocument.tags()).containsExactlyInAnyOrder("integration", "test");
+        assertNotNull(createdDocument.getId());
+        assertEquals("Integration Test Document", createdDocument.getTitle());
+        assertThat(createdDocument.getTags()).containsExactlyInAnyOrder("integration", "test");
 
         // Verify document is saved in database
-        Document savedDocument = documentRepo.findById(createdDocument.id()).orElse(null);
+        Document savedDocument = documentRepo.findById(createdDocument.getId()).orElse(null);
         assertNotNull(savedDocument);
         assertEquals("Integration Test Document", savedDocument.getTitle());
         assertNotNull(savedDocument.getCreatedAt());
@@ -114,14 +104,14 @@ class DocumentUploadIntegrationTest {
 
         // When: Get all documents
         String baseUrl = "http://localhost:" + port + "/v1/documents";
-        ResponseEntity<DocumentResponse[]> response = restTemplate.getForEntity(
+        ResponseEntity<Document[]> response = restTemplate.getForEntity(
                 baseUrl,
-                DocumentResponse[].class
+                Document[].class
         );
 
         // Then: Should return both documents
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        DocumentResponse[] documents = response.getBody();
+        Document[] documents = response.getBody();
         assertNotNull(documents);
         assertThat(documents.length).isGreaterThanOrEqualTo(2);
     }
@@ -129,21 +119,21 @@ class DocumentUploadIntegrationTest {
     @Test
     void getDocumentById_WithValidId_ShouldReturnDocument() {
         // Given: An uploaded document
-        UUID documentId = uploadTestDocument("Test Document").id();
+        UUID documentId = uploadTestDocument("Test Document").getId();
 
         // When: Get document by ID
         String url = "http://localhost:" + port + "/v1/documents/" + documentId;
-        ResponseEntity<DocumentResponse> response = restTemplate.getForEntity(
+        ResponseEntity<Document> response = restTemplate.getForEntity(
                 url,
-                DocumentResponse.class
+                Document.class
         );
 
         // Then: Should return the document
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        DocumentResponse document = response.getBody();
+        Document document = response.getBody();
         assertNotNull(document);
-        assertEquals(documentId, document.id());
-        assertEquals("Test Document", document.title());
+        assertEquals(documentId, document.getId());
+        assertEquals("Test Document", document.getTitle());
     }
 
     @Test
@@ -165,7 +155,7 @@ class DocumentUploadIntegrationTest {
     @Test
     void deleteDocument_WithValidId_ShouldRemoveDocument() {
         // Given: An uploaded document
-        UUID documentId = uploadTestDocument("Document to Delete").id();
+        UUID documentId = uploadTestDocument("Document to Delete").getId();
 
         // Verify it exists
         assertThat(documentRepo.findById(documentId)).isPresent();
@@ -229,7 +219,7 @@ class DocumentUploadIntegrationTest {
 
     // Helper methods
 
-    private DocumentResponse uploadTestDocument(String title) {
+    private Document uploadTestDocument(String title) {
         String baseUrl = "http://localhost:" + port + "/v1/documents";
         
         HttpHeaders headers = new HttpHeaders();
@@ -241,10 +231,10 @@ class DocumentUploadIntegrationTest {
 
         HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 
-        ResponseEntity<DocumentResponse> response = restTemplate.postForEntity(
+        ResponseEntity<Document> response = restTemplate.postForEntity(
                 baseUrl,
                 requestEntity,
-                DocumentResponse.class
+                Document.class
         );
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);

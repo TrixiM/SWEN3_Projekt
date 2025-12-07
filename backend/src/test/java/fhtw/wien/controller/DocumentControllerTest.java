@@ -3,11 +3,8 @@ package fhtw.wien.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fhtw.wien.domain.Document;
 import fhtw.wien.domain.DocumentStatus;
-import fhtw.wien.dto.DocumentResponse;
-import fhtw.wien.exception.InvalidRequestException;
 import fhtw.wien.exception.NotFoundException;
 import fhtw.wien.service.DocumentService;
-import fhtw.wien.util.DocumentMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +14,7 @@ import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.time.Instant;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -40,7 +37,6 @@ class DocumentControllerTest {
     private DocumentService documentService;
 
     private Document testDocument;
-    private DocumentResponse testDocumentResponse;
     private UUID testId;
 
     @BeforeEach
@@ -58,24 +54,6 @@ class DocumentControllerTest {
         testDocument.setStorageUri("s3://test-bucket/object-key");
         testDocument.setChecksumSha256("checksum123");
         testDocument.setStatus(DocumentStatus.UPLOADED);
-
-        testDocumentResponse = new DocumentResponse(
-                testId,
-                "Test Document",
-                "test.pdf",
-                "application/pdf",
-                1024L,
-                "test-bucket",
-                "object-key",
-                "s3://test-bucket/object-key",
-                "checksum123",
-                DocumentStatus.UPLOADED,
-                List.of("tag1", "tag2"),
-                null,
-                1,
-                Instant.now(),
-                Instant.now()
-        );
     }
 
     @Test

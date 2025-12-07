@@ -1,7 +1,8 @@
 package fhtw.wien.messaging;
 
 import static fhtw.wien.config.MessagingConstants.*;
-import fhtw.wien.dto.DocumentResponse;
+
+import fhtw.wien.domain.Document;
 import fhtw.wien.exception.MessagingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,17 +20,17 @@ public class DocumentMessageProducer {
         this.rabbitTemplate = rabbitTemplate;
     }
 
-    public void publishDocumentCreated(DocumentResponse document) {
-        log.info("Publishing document created event for document ID: {}", document.id());
+    public void publishDocumentCreated(Document document) {
+        log.info("Publishing document created event for document ID: {}", document.getId());
         try {
             rabbitTemplate.convertAndSend(
                     DOCUMENT_EXCHANGE,
                     DOCUMENT_CREATED_ROUTING_KEY,
                     document
             );
-            log.debug("Successfully published document created event for ID: {}", document.id());
+            log.debug("Successfully published document created event for ID: {}", document.getId());
         } catch (Exception e) {
-            log.error("Failed to publish document created event for ID: {}", document.id(), e);
+            log.error("Failed to publish document created event for ID: {}", document.getId(), e);
             throw new MessagingException("Failed to publish document created event", e);
         }
     }

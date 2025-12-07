@@ -1,10 +1,8 @@
 package fhtw.wien.controller;
 
 import fhtw.wien.domain.Document;
-import fhtw.wien.dto.DocumentResponse;
 import fhtw.wien.exception.InvalidRequestException;
 import fhtw.wien.service.DocumentService;
-import fhtw.wien.util.DocumentMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -34,7 +32,7 @@ public class DocumentController {
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<DocumentResponse> create(
+    public ResponseEntity<Document> create(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "title", required = false) String title,
             @RequestParam(value = "tags", required = false) List<String> tags
@@ -66,12 +64,11 @@ public class DocumentController {
         }
 
         var saved = service.create(doc, file.getInputStream());
-        var body = DocumentMapper.toResponse(saved);
-        return ResponseEntity.created(URI.create("/v1/documents/" + saved.getId())).body(body);
+        return ResponseEntity.created(URI.create("/v1/documents/" + saved.getId())).body(saved);
     }
 
     @PutMapping("{id}")
-    public ResponseEntity<DocumentResponse> update(
+    public ResponseEntity<Document> update(
             @PathVariable UUID id,
             @RequestBody Document updateRequest) {
         log.info("PUT /v1/documents/{} - Updating document", id);
@@ -100,21 +97,18 @@ public class DocumentController {
         }
 
         Document updated = service.update(existing);
-        DocumentResponse response = DocumentMapper.toResponse(updated);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(updated);
     }
 
 
     @GetMapping
-    public List<DocumentResponse> getAll() {
-        return service.getAll().stream()
-                .map(DocumentMapper::toResponse)
-                .toList();
+    public List<Document> getAll() {
+        return service.getAll();
     }
 
     @GetMapping("{id}")
-    public DocumentResponse get(@PathVariable UUID id) {
-        return DocumentMapper.toResponse(service.get(id));
+    public Document get(@PathVariable UUID id) {
+        return service.get(id);
     }
 
     @GetMapping("{id}/content")
