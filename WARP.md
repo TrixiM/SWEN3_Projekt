@@ -113,7 +113,7 @@ Layers and packages:
     - `DocumentIndex` represents the `documents` index with fields like `content`, `title`, counts, language, confidence, and timestamps.
     - `DocumentSearchRepository` provides Spring Data access to the index.
 - `dto/`
-  - Transport data structures for REST and messaging (e.g., `DocumentResponse`, `DocumentAnalyticsDto`, `SummaryResultDto`, `DocumentSearchDto`).
+  - Transport data structures for REST and messaging (e.g., `Document`, , `SummaryResultDto`, `DocumentSearchDto`).
 - `messaging/`
   - RabbitMQ producers and consumers tying the backend into the worker pipelines:
     - A producer publishes `document.created` events when new documents are stored.
@@ -149,7 +149,7 @@ Key structure:
 - `OcrWorkerApplication` is a standalone Spring Boot app (main class configured in the module `pom.xml`).
 - `messaging/`
   - `OcrMessageConsumer` listens on `document.created.queue` (via `RabbitMQConfig.DOCUMENT_CREATED_QUEUE`).
-  - For each message (`DocumentResponse`), it:
+  - For each message (`Document`), it:
     - Performs an idempotency check via `IdempotencyService`.
     - Calls `OcrProcessingService` to run the OCR pipeline.
     - Indexes successful OCR results into Elasticsearch via `ElasticsearchService`.

@@ -40,17 +40,11 @@ public class DocumentService {
         this.messageProducer = messageProducer;
     }
 
-    /**
-     * Creates a new document by uploading PDF to MinIO and saving metadata to database.
-     * Uses InputStream to avoid loading entire PDF into memory.
-     */
+
     public Document create(Document doc, InputStream pdfStream) {
         try {
             Document created = documentBusinessLogic.createOrUpdateDocument(doc, pdfStream);
-            
-            // Publish message after document is created
             messageProducer.publishDocumentCreated(created);
-            
             return created;
         } catch (Exception e) {
             log.error("Failed to create document: {}", doc.getTitle(), e);

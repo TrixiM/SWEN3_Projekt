@@ -1,7 +1,7 @@
 package fhtw.wien.ocrworker.messaging;
 
 import fhtw.wien.ocrworker.config.RabbitMQConfig;
-import fhtw.wien.ocrworker.dto.DocumentResponse;
+import fhtw.wien.ocrworker.dto.Document;
 import fhtw.wien.ocrworker.dto.OcrResultDto;
 import fhtw.wien.ocrworker.elasticsearch.ElasticsearchService;
 import fhtw.wien.ocrworker.service.IdempotencyService;
@@ -31,26 +31,26 @@ public class OcrMessageConsumer {
     }
 
     @RabbitListener(queues = RabbitMQConfig.DOCUMENT_CREATED_QUEUE)
-    public void handleDocumentCreated(DocumentResponse document) {
-        log.info("📄 OCR started: id={}, file='{}'", document.id(), document.originalFilename());
+    public void handleDocumentCreated(Document document) {
+        log.info("OCR started: id={}, file='{}'", document.id(), document.originalFilename());
         
         // Idempotency check
         String messageId = "ocr-doc-" + document.id();
         if (!idempotencyService.tryMarkAsProcessed(messageId)) {
-            log.info("⏭️ Skipping duplicate: {}", document.id());
+            log.info("⏭Skipping duplicate: {}", document.id());
             return;
         }
         
         OcrResultDto ocrResult = ocrProcessingService.processDocument(document);
         
-        log.info("✅ OCR done: id={}, chars={}", document.id(), ocrResult.totalCharacters());
+        log.info("OCR done: id={}, chars={}", document.id(), ocrResult.totalCharacters());
         
         // Index document in Elasticsearch if OCR was successful
         if (ocrResult.isSuccess() && ocrResult.extractedText() != null && !ocrResult.extractedText().isEmpty()) {
             try {
                 elasticsearchService.indexDocument(ocrResult);
             } catch (Exception e) {
-                log.error("❌ Elasticsearch indexing failed: {}", document.id(), e);
+                log.error("Elasticsearch indexing failed: {}", document.id(), e);
             }
         }
         
@@ -66,9 +66,9 @@ public class OcrMessageConsumer {
                     RabbitMQConfig.OCR_COMPLETED_ROUTING_KEY,
                     ocrResult
             );
-            log.info("📤 Sent OCR result to GenAI: id={}, status={}", ocrResult.documentId(), ocrResult.status());
+            log.info("Sent OCR result to GenAI: id={}, status={}", ocrResult.documentId(), ocrResult.status());
         } catch (Exception e) {
-            log.error("❌ Failed to send OCR result: {}", ocrResult.documentId(), e);
+            log.error(" Failed to send OCR result: {}", ocrResult.documentId(), e);
         }
     }
 }

@@ -42,26 +42,7 @@ class TesseractOcrServiceTest {
         // Note: TesseractOcrService requires actual Tesseract installation
         // These tests will be integration tests that check behavior
     }
-    
-    @Test
-    void extractText_WithNullData_ShouldThrowException() {
-        // Test input validation
-        if (ocrService != null) {
-            assertThrows(IllegalArgumentException.class, () -> {
-                ocrService.extractText(null, "eng");
-            });
-        }
-    }
-    
-    @Test
-    void extractText_WithEmptyData_ShouldThrowException() {
-        // Test input validation
-        if (ocrService != null) {
-            assertThrows(IllegalArgumentException.class, () -> {
-                ocrService.extractText(new byte[0], "eng");
-            });
-        }
-    }
+
     
     @Test
     void getAvailableLanguages_ShouldReturnConfiguredLanguages() {

@@ -15,10 +15,8 @@ public class IdempotencyService {
     
     private static final Logger log = LoggerFactory.getLogger(IdempotencyService.class);
     
-    // Cache structure: messageId -> processing timestamp
     private final Map<String, Instant> processedMessages = new ConcurrentHashMap<>();
     
-    // TTL for processed messages (24 hours)
     private static final long TTL_HOURS = 24;
 
     public boolean tryMarkAsProcessed(String messageId) {
@@ -31,7 +29,7 @@ public class IdempotencyService {
             return false;
         }
         
-        log.debug("✅ Message can be processed: {}", messageId);
+        log.debug("Message can be processed: {}", messageId);
         return true;
     }
     

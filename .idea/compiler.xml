@@ -10,6 +10,7 @@
         <module name="DocumentManagementSystem (2)" />
         <module name="DocumentManagementSystem (1)" />
         <module name="DocumentManagementSystem" />
+        <module name="OCRWorker" />
       </profile>
     </annotationProcessing>
   </component>
@@ -18,6 +19,7 @@
       <module name="DocumentManagementSystem" options="-parameters" />
       <module name="DocumentManagementSystem (1)" options="-parameters" />
       <module name="DocumentManagementSystem (2)" options="-parameters" />
+      <module name="OCRWorker" options="-parameters" />
     </option>
   </component>
 </project>

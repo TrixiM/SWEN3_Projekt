@@ -1,7 +1,7 @@
 package fhtw.wien.ocrworker.service;
 
 import fhtw.wien.ocrworker.config.OcrConfig;
-import fhtw.wien.ocrworker.dto.DocumentResponse;
+import fhtw.wien.ocrworker.dto.Document;
 import fhtw.wien.ocrworker.dto.OcrResultDto;
 import fhtw.wien.ocrworker.util.FileTypeDetector;
 import net.sourceforge.tess4j.TesseractException;
@@ -41,7 +41,7 @@ public class UnifiedOcrService {
     }
     
 
-    public OcrResultDto processDocument(DocumentResponse document) {
+    public OcrResultDto processDocument(Document document) {
         long startTime = System.currentTimeMillis();
         
         try {
@@ -49,18 +49,18 @@ public class UnifiedOcrService {
             validateDocument(document);
             
             // Download document from MinIO
-            byte[] documentData = downloadDocumentFromStorage(document);
-            
+            byte[] documentData = minioClientService.downloadDocument(document.objectKey());
+
             // Detect file type
             FileTypeDetector.FileType fileType = detectFileType(document, documentData);
-            
+
             // Process based on file type
             OcrResultDto result = switch (fileType) {
                 case PDF -> processPdfDocument(document, documentData, startTime);
                 case IMAGE -> processImageDocument(document, documentData, startTime);
                 case UNSUPPORTED -> createUnsupportedFileResult(document, startTime);
             };
-            
+
             return result;
             
         } catch (Exception e) {
@@ -77,7 +77,7 @@ public class UnifiedOcrService {
     }
     
 
-    private void validateDocument(DocumentResponse document) {
+    private void validateDocument(Document document) {
         if (document == null) {
             throw new IllegalArgumentException("Document cannot be null");
         }
@@ -94,14 +94,8 @@ public class UnifiedOcrService {
             log.warn("Unsupported content type for document {}: {}", document.id(), document.contentType());
         }
     }
-    
 
-    private byte[] downloadDocumentFromStorage(DocumentResponse document) throws IOException {
-        return minioClientService.downloadDocument(document.objectKey());
-    }
-    
-
-    private FileTypeDetector.FileType detectFileType(DocumentResponse document, byte[] documentData) throws IOException {
+    private FileTypeDetector.FileType detectFileType(Document document, byte[] documentData) throws IOException {
         // Detect file type using magic number analysis
         try (ByteArrayInputStream inputStream = new ByteArrayInputStream(documentData)) {
             return fileTypeDetector.detectFileType(inputStream);
@@ -109,7 +103,7 @@ public class UnifiedOcrService {
     }
     
 
-    private OcrResultDto processPdfDocument(DocumentResponse document, byte[] pdfData, long startTime) 
+    private OcrResultDto processPdfDocument(Document document, byte[] pdfData, long startTime)
             throws IOException, TesseractException {
         
         // Convert PDF pages to images
@@ -119,7 +113,6 @@ public class UnifiedOcrService {
             throw new IOException("PDF contains no processable pages");
         }
         
-        // Process each page with OCR
         List<OcrResultDto.PageResult> pageResults = new ArrayList<>();
         StringBuilder fullText = new StringBuilder();
         int totalConfidence = 0;
@@ -181,7 +174,7 @@ public class UnifiedOcrService {
     }
     
 
-    private OcrResultDto processImageDocument(DocumentResponse document, byte[] imageData, long startTime) 
+    private OcrResultDto processImageDocument(Document document, byte[] imageData, long startTime)
             throws IOException, TesseractException {
         
         // Extract text with confidence
@@ -205,7 +198,7 @@ public class UnifiedOcrService {
         );
     }
 
-    private OcrResultDto createUnsupportedFileResult(DocumentResponse document, long startTime) {
+    private OcrResultDto createUnsupportedFileResult(Document document, long startTime) {
         long processingTime = System.currentTimeMillis() - startTime;
         
         String errorMessage = String.format("Unsupported file type: %s. %s", 
