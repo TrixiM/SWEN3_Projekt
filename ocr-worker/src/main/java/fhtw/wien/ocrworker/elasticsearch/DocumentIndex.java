@@ -45,9 +45,9 @@ public class DocumentIndex {
     private Instant processedAt;
     
 
-    private DocumentIndex(UUID documentId, String title, String content,
-                          int totalCharacters, int totalPages, String language,
-                          int confidence, Instant processedAt) {
+    DocumentIndex(UUID documentId, String title, String content,
+                  int totalCharacters, int totalPages, String language,
+                  int confidence, Instant processedAt) {
         this.id = documentId.toString();
         this.documentId = documentId;
         this.title = title;

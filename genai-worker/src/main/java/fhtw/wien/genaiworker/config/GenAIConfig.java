@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Configuration;
 public class GenAIConfig {
     
     private Api api = new Api();
-    private String model = "gemini-1.5-flash";
+    private String model = "gemini-2.5-flash-lite";
     private int maxTokens = 500;
     private double temperature = 0.3;
     

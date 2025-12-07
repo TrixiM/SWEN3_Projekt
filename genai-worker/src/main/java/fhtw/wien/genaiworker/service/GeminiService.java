@@ -62,9 +62,10 @@ public class GeminiService {
 
         try {
             GeminiResponse response = restClient.post()
-                    .uri(uriBuilder -> uriBuilder
-                            .queryParam("key", config.getApi().getKey())
-                            .build())
+                    .uri("/v1beta/models/{model}:generateContent?key={key}",
+                            config.getModel(),
+                            config.getApi().getKey()
+                    )
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(requestBody)
                     .retrieve()
