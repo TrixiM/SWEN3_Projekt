@@ -1,5 +1,6 @@
 package fhtw.wien.ocrworker.elasticsearch;
 
+import fhtw.wien.ocrworker.dto.OcrResultDto;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
@@ -7,6 +8,7 @@ import org.springframework.data.elasticsearch.annotations.FieldType;
 
 import java.time.Instant;
 import java.util.UUID;
+import java.util.Objects;
 
 
 @Document(indexName = "documents")
@@ -42,12 +44,10 @@ public class DocumentIndex {
     @Field(type = FieldType.Date)
     private Instant processedAt;
     
-    public DocumentIndex() {
-    }
-    
-    public DocumentIndex(UUID documentId, String title, String content, 
-                        int totalCharacters, int totalPages, String language, 
-                        int confidence, Instant processedAt) {
+
+    private DocumentIndex(UUID documentId, String title, String content,
+                          int totalCharacters, int totalPages, String language,
+                          int confidence, Instant processedAt) {
         this.id = documentId.toString();
         this.documentId = documentId;
         this.title = title;
@@ -60,84 +60,35 @@ public class DocumentIndex {
         this.indexedAt = Instant.now();
     }
     
-    // Getters and Setters
-    public String getId() {
-        return id;
+    public static DocumentIndex from(OcrResultDto ocrResult) {
+        Objects.requireNonNull(ocrResult, "ocrResult");
+        return new DocumentIndex(
+                ocrResult.documentId(),
+                defaultString(ocrResult.documentTitle()),
+                defaultString(ocrResult.extractedText()),
+                ocrResult.totalCharacters(),
+                ocrResult.totalPages(),
+                defaultString(ocrResult.language()),
+                ocrResult.overallConfidence(),
+                ocrResult.processedAt()
+        );
     }
     
-    public void setId(String id) {
-        this.id = id;
+    private static String defaultString(String value) {
+        return value == null ? "" : value;
     }
-    
     public UUID getDocumentId() {
         return documentId;
     }
-    
-    public void setDocumentId(UUID documentId) {
-        this.documentId = documentId;
-    }
-    
     public String getTitle() {
         return title;
     }
-    
-    public void setTitle(String title) {
-        this.title = title;
-    }
-    
     public String getContent() {
         return content;
     }
-    
-    public void setContent(String content) {
-        this.content = content;
-    }
-    
-    public int getTotalCharacters() {
-        return totalCharacters;
-    }
-    
-    public void setTotalCharacters(int totalCharacters) {
-        this.totalCharacters = totalCharacters;
-    }
-    
-    public int getTotalPages() {
-        return totalPages;
-    }
-    
-    public void setTotalPages(int totalPages) {
-        this.totalPages = totalPages;
-    }
-    
-    public String getLanguage() {
-        return language;
-    }
-    
-    public void setLanguage(String language) {
-        this.language = language;
-    }
-    
     public int getConfidence() {
         return confidence;
     }
     
-    public void setConfidence(int confidence) {
-        this.confidence = confidence;
-    }
-    
-    public Instant getIndexedAt() {
-        return indexedAt;
-    }
-    
-    public void setIndexedAt(Instant indexedAt) {
-        this.indexedAt = indexedAt;
-    }
-    
-    public Instant getProcessedAt() {
-        return processedAt;
-    }
-    
-    public void setProcessedAt(Instant processedAt) {
-        this.processedAt = processedAt;
-    }
+
 }

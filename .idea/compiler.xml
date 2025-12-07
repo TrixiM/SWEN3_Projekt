@@ -10,6 +10,7 @@
         <module name="DocumentManagementSystem (2)" />
         <module name="DocumentManagementSystem (1)" />
         <module name="DocumentManagementSystem" />
+        <module name="genai-worker" />
         <module name="OCRWorker" />
       </profile>
     </annotationProcessing>
@@ -20,6 +21,7 @@
       <module name="DocumentManagementSystem (1)" options="-parameters" />
       <module name="DocumentManagementSystem (2)" options="-parameters" />
       <module name="OCRWorker" options="-parameters" />
+      <module name="genai-worker" options="-parameters" />
     </option>
   </component>
 </project>

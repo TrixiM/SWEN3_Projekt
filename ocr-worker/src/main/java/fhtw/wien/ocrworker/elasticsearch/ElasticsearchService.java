@@ -22,18 +22,7 @@ public class ElasticsearchService {
         log.debug("Indexing document {} into Elasticsearch", ocrResult.documentId());
 
         try {
-            DocumentIndex documentIndex = new DocumentIndex(
-                    ocrResult.documentId(),
-                    ocrResult.documentTitle(),
-                    ocrResult.extractedText(),
-                    ocrResult.totalCharacters(),
-                    ocrResult.totalPages(),
-                    ocrResult.language(),
-                    ocrResult.overallConfidence(),
-                    ocrResult.processedAt()
-            );
-
-            return repository.save(documentIndex);
+            return repository.save(DocumentIndex.from(ocrResult));
         } catch (Exception e) {
             log.error("Failed to index document {}", ocrResult.documentId(), e);
             throw new RuntimeException("Failed to index document", e);
