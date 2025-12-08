@@ -16,6 +16,8 @@ public class RabbitMQConfig {
     public static final String DOCUMENT_CREATED_QUEUE = "document.created.queue";
     public static final String DOCUMENT_CREATED_ROUTING_KEY = "document.created";
     public static final String OCR_COMPLETED_ROUTING_KEY = "ocr.completed";
+    public static final String DOCUMENT_DELETED_QUEUE = "document.deleted.queue";
+    public static final String DOCUMENT_DELETED_ROUTING_KEY = "document.deleted";
 
     @Bean
     public DirectExchange documentExchange() {
@@ -28,10 +30,20 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Queue documentDeletedQueue() {return new Queue(DOCUMENT_DELETED_QUEUE, true);}
+
+    @Bean
     public Binding documentCreatedBinding(Queue documentCreatedQueue, DirectExchange documentExchange) {
         return BindingBuilder.bind(documentCreatedQueue)
                 .to(documentExchange)
                 .with(DOCUMENT_CREATED_ROUTING_KEY);
+    }
+
+    @Bean
+    public Binding documentDeletedBinding(Queue documentDeletedQueue, DirectExchange documentExchange) {
+        return BindingBuilder.bind(documentDeletedQueue)
+                .to(documentExchange)
+                .with(DOCUMENT_DELETED_ROUTING_KEY);
     }
 
     @Bean

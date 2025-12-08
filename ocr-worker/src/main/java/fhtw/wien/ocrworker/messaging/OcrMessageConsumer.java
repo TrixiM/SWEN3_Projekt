@@ -12,6 +12,8 @@ import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
+import java.util.UUID;
+
 @Component
 public class OcrMessageConsumer {
 
@@ -55,6 +57,25 @@ public class OcrMessageConsumer {
 
         sendOcrCompletionMessage(ocrResult);
     }
+
+    @RabbitListener(queues = RabbitMQConfig.DOCUMENT_DELETED_QUEUE)
+    public void handleDocumentDeleted(UUID id) {
+        log.info("Received document deletion event: id={}", id);
+
+        String messageId = "delete-doc-" + id;
+        if (!idempotencyService.tryMarkAsProcessed(messageId)) {
+            log.info("Skipping duplicate delete message for {}", id);
+            return;
+        }
+
+        try {
+            elasticsearchService.deleteDocument(id);
+            log.info("Deleted document {} from Elasticsearch", id);
+        } catch (Exception e) {
+            log.error("Failed to delete document {} from Elasticsearch", id, e);
+        }
+    }
+
 
     private void sendOcrCompletionMessage(OcrResultDto ocrResult) {
         try {

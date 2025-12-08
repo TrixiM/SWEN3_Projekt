@@ -9,6 +9,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
+import java.util.UUID;
+
 @Component
 public class DocumentMessageProducer {
 
@@ -32,6 +34,22 @@ public class DocumentMessageProducer {
         } catch (Exception e) {
             log.error("Failed to publish document created event for ID: {}", document.getId(), e);
             throw new MessagingException("Failed to publish document created event", e);
+        }
+    }
+
+    public void deleteDocument(UUID id) {
+        log.info("Deleting elasticsearch index of document with ID: {}", id);
+        try{
+            rabbitTemplate.convertAndSend(
+                    DOCUMENT_EXCHANGE,
+                    DOCUMENT_DELETED_ROUTING_KEY,
+                    id
+            );
+            log.debug("Successfully deleted elasticsearch index of document with ID: {}", id);
+
+        }catch (Exception e){
+            log.error("Failed to delete elasticsearch index of document with ID: {}", id, e);
+            throw new MessagingException("Failed to delete elasticsearch index", e);
         }
     }
 }

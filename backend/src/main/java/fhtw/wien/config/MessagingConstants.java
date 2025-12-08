@@ -16,4 +16,6 @@ public final class MessagingConstants {
     // Routing Keys
     public static final String DOCUMENT_CREATED_ROUTING_KEY = "document.created";
     public static final String SUMMARY_RESULT_ROUTING_KEY = "summary.result";
+    public static final String DOCUMENT_DELETED_ROUTING_KEY = "document.deleted";
+
 }
