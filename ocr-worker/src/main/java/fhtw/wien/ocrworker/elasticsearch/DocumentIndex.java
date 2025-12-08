@@ -2,9 +2,7 @@ package fhtw.wien.ocrworker.elasticsearch;
 
 import fhtw.wien.ocrworker.dto.OcrResultDto;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.elasticsearch.annotations.Document;
-import org.springframework.data.elasticsearch.annotations.Field;
-import org.springframework.data.elasticsearch.annotations.FieldType;
+import org.springframework.data.elasticsearch.annotations.*;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -19,8 +17,14 @@ public class DocumentIndex {
     
     @Field(type = FieldType.Keyword)
     private UUID documentId;
-    
-    @Field(type = FieldType.Text)
+
+
+    @MultiField(
+            mainField = @Field(type = FieldType.Text, analyzer = "simple"),
+            otherFields = {
+                    @InnerField(suffix = "keyword", type = FieldType.Keyword)
+            }
+    )
     private String title;
     
     @Field(type = FieldType.Text, analyzer = "standard")
