@@ -69,7 +69,37 @@ function setupEventListeners() {
     if (filterStatus) {
         filterStatus.addEventListener('change', filterDocuments);
     }
+
+    document.addEventListener("click", e => {
+        if (e.target.closest("tr")) return; // <-- ignore table clicks
+
+        const sidebar = document.getElementById("pdf-panel");
+        const isOpen = !sidebar.classList.contains("translate-x-full");
+
+        if (isOpen && !sidebar.contains(e.target)) {
+            closePdfSidebar();
+        }
+    });
+
+
 }
+
+function togglePdfPanel() {
+    const panel = document.getElementById("pdf-panel");
+    const isOpen = !panel.classList.contains("translate-x-full");
+
+    if (isOpen) {
+        closePdfSidebar();
+    } else {
+        panel.classList.remove("translate-x-full");
+
+        if (currentDocumentId) {
+            // Re-render current page if panel opens again
+            renderPage(currentPage);
+        }
+    }
+}
+
 
 // Fetch and display all documents
 async function loadDocuments() {
@@ -409,15 +439,15 @@ let currentPage = 1;
 let totalPages = 0;
 
 async function openPdfPreview(documentId, title) {
-    const modal = document.getElementById('pdf-modal');
-    const modalTitle = document.getElementById('pdf-modal-title');
+    const panel = document.getElementById("pdf-panel");
+    panel.classList.remove("translate-x-full"); // <-- opens the tab panel
+
+    const titleEl = document.getElementById('pdf-sidebar-title');
     const image = document.getElementById('pdf-image');
     const loading = document.getElementById('pdf-loading');
     const error = document.getElementById('pdf-error');
 
-    // Show modal
-    modal.classList.remove('hidden');
-    modalTitle.textContent = title;
+    titleEl.textContent = title;
 
     // Hide image and error, show loading
     image.style.display = 'none';
@@ -491,9 +521,8 @@ async function renderPage(pageNum) {
     }
 }
 
-function closePdfModal() {
-    const modal = document.getElementById('pdf-modal');
-    modal.classList.add('hidden');
+function closePdfSidebar() {
+    document.getElementById("pdf-panel").classList.add("translate-x-full");
 
     // Clean up
     const image = document.getElementById('pdf-image');
@@ -519,10 +548,11 @@ function nextPage() {
 }
 
 // Make functions globally available for inline onclick handlers
+window.togglePdfPanel = togglePdfPanel;
 window.editDocument = editDocument;
 window.deleteDocument = deleteDocument;
 window.openPdfPreview = openPdfPreview;
-window.closePdfModal = closePdfModal;
+window.closePdfSidebar = closePdfSidebar;
 window.previousPage = previousPage;
 window.nextPage = nextPage;
 
@@ -532,7 +562,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (modal) {
         modal.addEventListener('click', function(e) {
             if (e.target === modal) {
-                closePdfModal();
+                closePdfSidebar();
             }
         });
     }
