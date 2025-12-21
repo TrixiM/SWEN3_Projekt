@@ -1,13 +1,13 @@
-import { 
-    API_CONFIG, 
-    TOAST_TYPES, 
-    showMessage, 
-    escapeHtml, 
-    formatBytes, 
-    formatDate, 
-    apiRequest, 
-    validateFile, 
-    debounce 
+import {
+    API_CONFIG,
+    apiRequest,
+    debounce,
+    escapeHtml,
+    formatBytes,
+    formatDate,
+    showMessage,
+    TOAST_TYPES,
+    validateFile
 } from './utils.js';
 
 // DOM elements
@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeDOM();
     loadDocuments();
     setupEventListeners();
+    setupPdfResize();
 });
 
 function initializeDOM() {
@@ -237,9 +238,9 @@ function displayDocuments(documents) {
         const isPdf = doc.contentType === 'application/pdf';
         const rowClass = isPdf ? 'cursor-pointer' : '';
         const onClickAttr = isPdf ? `onclick="openPdfPreview('${doc.id}', '${escapeHtml(doc.title)}')"` : '';
-        
+
         // Format tags for display
-        const tagsHtml = doc.tags && doc.tags.length > 0 
+        const tagsHtml = doc.tags && doc.tags.length > 0
             ? `<div class="flex flex-wrap gap-1 mt-1">${doc.tags.map(tag => 
                 `<span class="px-2 py-0.5 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 rounded">${escapeHtml(tag)}</span>`
               ).join('')}</div>`
@@ -249,7 +250,7 @@ function displayDocuments(documents) {
             <tr class="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors ${rowClass}" ${onClickAttr}>
                 <td class="px-6 py-4">
                     <div class="font-medium text-foreground-light dark:text-foreground-dark flex items-center gap-2">
-                        ${isPdf ? '<span class="material-symbols-outlined text-red-500 text-sm">picture_as_pdf</span>' : ''}
+                        ${isPdf ? '<span class="material-symbols-outlined text-red-500 text-sm">picture_as_pdf</span>' : '<span class="material-symbols-outlined text-green-500 text-sm">image</span>'}
                         ${escapeHtml(doc.title)}
                     </div>
                     <div class="text-xs text-muted-light dark:text-muted-dark">${escapeHtml(doc.originalFilename)}</div>
@@ -467,6 +468,9 @@ async function openPdfPreview(documentId, title) {
         // Render first page
         await renderPage(currentPage);
 
+        const doc = allDocuments.find(doc => doc.id === documentId);
+        document.getElementById('pdf-summary').textContent = doc.summary;
+
         // Hide loading, show image
         loading.style.display = 'none';
         image.style.display = 'block';
@@ -524,11 +528,12 @@ async function renderPage(pageNum) {
 function closePdfSidebar() {
     document.getElementById("pdf-panel").classList.add("translate-x-full");
 
+    document.getElementById("pdf-panel").style.width = ""; //reset width
     // Clean up
     const image = document.getElementById('pdf-image');
     if (image.src) {
         URL.revokeObjectURL(image.src);
-        image.src = '';
+        image.src = ''; //clean up
     }
     currentDocumentId = null;
     currentPage = 1;
