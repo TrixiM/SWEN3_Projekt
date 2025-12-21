@@ -34,11 +34,11 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeDOM();
     loadDocuments();
     setupEventListeners();
-    setupPdfResize();
 });
 
 function initializeDOM() {
     documentsTbody = document.getElementById('documents-tbody');
+    console.log('documentsTbody:', documentsTbody); //log for debugging
     fileInput = document.querySelector('input[type="file"]');
     searchInput = document.getElementById('search-input');
     filterContentType = document.getElementById('filter-content-type');
@@ -108,7 +108,7 @@ async function loadDocuments() {
         console.log('Loading documents...');
         allDocuments = await apiRequest(API_CONFIG.ENDPOINTS.DOCUMENTS);
         console.log('Documents loaded:', allDocuments);
-        filterDocuments();
+        await filterDocuments();
     } catch (error) {
         console.error('Error loading documents:', error);
         showDocumentLoadError(error.message);
@@ -237,8 +237,9 @@ function displayDocuments(documents) {
         const statusClass = getStatusClass(doc.status);
         const isPdf = doc.contentType === 'application/pdf';
         const rowClass = isPdf ? 'cursor-pointer' : '';
-        const onClickAttr = isPdf ? `onclick="openPdfPreview('${doc.id}', '${escapeHtml(doc.title)}')"` : '';
-
+        const onClickAttr = `onclick="openPdfPreview('${doc.id}', '${escapeHtml(doc.title)}')"`;
+        const isImage = doc.contentType.startsWith('image/');
+        console.log(doc.title + "-" + doc.contentType);
         // Format tags for display
         const tagsHtml = doc.tags && doc.tags.length > 0
             ? `<div class="flex flex-wrap gap-1 mt-1">${doc.tags.map(tag => 
@@ -250,7 +251,9 @@ function displayDocuments(documents) {
             <tr class="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors ${rowClass}" ${onClickAttr}>
                 <td class="px-6 py-4">
                     <div class="font-medium text-foreground-light dark:text-foreground-dark flex items-center gap-2">
-                        ${isPdf ? '<span class="material-symbols-outlined text-red-500 text-sm">picture_as_pdf</span>' : '<span class="material-symbols-outlined text-green-500 text-sm">image</span>'}
+                        ${isPdf ? '<span class="material-symbols-outlined text-red-500 text-sm">picture_as_pdf</span>' :  isImage
+                        ? '<span class="material-symbols-outlined text-green-500 text-sm">image</span>'
+                        : ''}
                         ${escapeHtml(doc.title)}
                     </div>
                     <div class="text-xs text-muted-light dark:text-muted-dark">${escapeHtml(doc.originalFilename)}</div>
@@ -454,6 +457,27 @@ async function openPdfPreview(documentId, title) {
     image.style.display = 'none';
     loading.style.display = 'block';
     error.classList.add('hidden');
+
+    const doc = allDocuments.find(doc => doc.id === documentId);
+
+    if (doc?.contentType.startsWith('image/')) {
+        const panel = document.getElementById("pdf-panel");
+        panel.classList.remove("translate-x-full");
+
+        document.getElementById('pdf-sidebar-title').textContent = title;
+
+        const image = document.getElementById('pdf-image');
+        image.src = API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.DOCUMENT_PAGES(documentId, 1, 1.5);
+        image.style.display = 'block';
+
+        document.getElementById('pdf-loading').style.display = 'none';
+        document.getElementById('prev-page').disabled = true;
+        document.getElementById('next-page').disabled = true;
+        document.getElementById('page-count').textContent = '1';
+        document.getElementById('page-num').textContent = '1';
+
+        return;
+    }
 
     try {
         // Fetch page count from backend
