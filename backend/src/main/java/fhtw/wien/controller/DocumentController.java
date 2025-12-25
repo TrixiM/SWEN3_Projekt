@@ -3,6 +3,7 @@ package fhtw.wien.controller;
 import fhtw.wien.domain.Document;
 import fhtw.wien.exception.InvalidRequestException;
 import fhtw.wien.service.DocumentService;
+import fhtw.wien.service.MinIOStorageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -26,9 +27,11 @@ public class DocumentController {
     private static final Logger log = LoggerFactory.getLogger(DocumentController.class);
 
     private final DocumentService service;
+    private final MinIOStorageService minioStorageService;
 
-    public DocumentController(DocumentService service) {
+    public DocumentController(DocumentService service, MinIOStorageService minioStorageService) {
         this.service = service;
+        this.minioStorageService = minioStorageService;
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -145,6 +148,15 @@ public class DocumentController {
     ) {
         if (pageNumber < 1) {
             throw new InvalidRequestException("Page number must be greater than 0");
+        }
+
+        if(!service.get(id).getContentType().contains("application/pdf") && pageNumber == 1) {
+            byte[] imageBytes = service.getDocumentContent(service.get(id));
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.IMAGE_PNG)
+                    .contentLength(imageBytes.length)
+                    .body(imageBytes);
         }
         
         byte[] imageBytes = service.renderPdfPage(id, pageNumber, scale);
