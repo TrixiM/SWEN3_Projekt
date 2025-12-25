@@ -443,6 +443,7 @@ let currentPage = 1;
 let totalPages = 0;
 
 async function openPdfPreview(documentId, title) {
+    document.getElementById('pdf-summary').textContent = ""; //implement proper clean up function next
     const panel = document.getElementById("pdf-panel");
     panel.classList.remove("translate-x-full"); // <-- opens the tab panel
 
