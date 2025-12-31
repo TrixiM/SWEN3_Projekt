@@ -125,7 +125,7 @@ class DocumentSearchServiceTest {
             service.search(query);
         });
         
-        assertTrue(exception.getMessage().contains("Search failed"));
+        assertTrue(exception.getMessage().contains("Search error"));
     }
     
     @Test

@@ -5,7 +5,7 @@ import fhtw.wien.ocrworker.dto.Document;
 import fhtw.wien.ocrworker.dto.OcrResultDto;
 import fhtw.wien.ocrworker.elasticsearch.ElasticsearchService;
 import fhtw.wien.ocrworker.service.IdempotencyService;
-import fhtw.wien.ocrworker.service.OcrProcessingService;
+import fhtw.wien.ocrworker.service.UnifiedOcrService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -20,12 +20,12 @@ public class OcrMessageConsumer {
     private static final Logger log = LoggerFactory.getLogger(OcrMessageConsumer.class);
 
     private final RabbitTemplate rabbitTemplate;
-    private final OcrProcessingService ocrProcessingService;
+    private final UnifiedOcrService ocrProcessingService;
     private final IdempotencyService idempotencyService;
     private final ElasticsearchService elasticsearchService;
 
     public OcrMessageConsumer(RabbitTemplate rabbitTemplate,
-                              OcrProcessingService ocrProcessingService,
+                              UnifiedOcrService ocrProcessingService,
                               IdempotencyService idempotencyService,
                               ElasticsearchService elasticsearchService) {
         this.rabbitTemplate = rabbitTemplate;

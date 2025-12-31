@@ -62,6 +62,11 @@ backend/src/test/java/fhtw/wien/
 
 ### 2. Integration Tests
 
+#### Approach to integration testing
+The OCR and AI workers are asynchronous in production via queues.
+For the integration test, the queue publishers are replaced with synchronous in-memory
+implementations to allow deterministic verification of the document upload use case.
+
 #### DocumentUploadIntegrationTest
 - **Coverage**: End-to-end workflows
 - **Technology**: TestContainers (PostgreSQL), Spring Boot Test

@@ -40,6 +40,7 @@ public class UnifiedOcrService {
     }
 
     public OcrResultDto processDocument(Document document) {
+        log.info("Processing document {} ({})", document.id(), document.title());
         validateDocument(document);
         long startTime = System.currentTimeMillis();
 
