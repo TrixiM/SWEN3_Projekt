@@ -30,7 +30,7 @@ public class GenAIMessageConsumer {
     }
 
 
-    @RabbitListener(queues = RabbitMQConfig.OCR_COMPLETED_QUEUE, containerFactory = "rabbitListenerContainerFactory")
+    @RabbitListener(queues = RabbitMQConfig.OCR_COMPLETED_QUEUE, containerFactory = "rabbitListenerContainerFactory") //Catch OCR completion message
     public void handleOcrCompleted(OcrResultDto message) {
         log.info("Summarization started: id={}, chars={}", message.documentId(), message.totalCharacters());
         

@@ -47,9 +47,9 @@ public class GeminiService {
                 .build();
     }
 
-    @CircuitBreaker(name = "geminiService", fallbackMethod = "generateSummaryFallback")
-    @Retry(name = "geminiService")
-    @RateLimiter(name = "geminiService")
+    @CircuitBreaker(name = "geminiService", fallbackMethod = "generateSummaryFallback") //prevents worker from repeatedly calling gemini if already failing (CLOSED -> GOOD, OPEN --> TOO MANY FAILURES, HALF-OPEN)
+    @Retry(name = "geminiService") //retry if call to gemini fails -> amount set in application.properties | ciructBreaker only records failure after third consecutive fail
+    @RateLimiter(name = "geminiService") //limits how many requests per time window are allowed
     public String generateSummary(String text) {
         long startTime = System.currentTimeMillis();
 
@@ -83,6 +83,12 @@ public class GeminiService {
             log.error("❌ Error calling Gemini API: {}", e.getMessage());
             throw new GenAIException("Failed to call Gemini API", e);
         }
+    }
+
+    @SuppressWarnings("unused")
+    public String generateSummaryFallback(String text, Throwable t) {
+        log.warn("Gemini fallback triggered", t);
+        return "Summary temporarily unavailable.";
     }
 
 

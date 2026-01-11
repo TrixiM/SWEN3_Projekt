@@ -17,6 +17,7 @@ FROM eclipse-temurin:21-jre
 
 # Install Tesseract OCR and language packs
 RUN apt-get update && apt-get install -y \
+    libc-bin \
     tesseract-ocr \
     tesseract-ocr-eng \
     tesseract-ocr-deu \
