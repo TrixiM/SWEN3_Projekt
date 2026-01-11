@@ -476,6 +476,7 @@ async function openPdfPreview(documentId, title) {
         document.getElementById('next-page').disabled = true;
         document.getElementById('page-count').textContent = '1';
         document.getElementById('page-num').textContent = '1';
+        document.getElementById('pdf-summary').textContent = doc.summary || 'Summary not available';
 
         return;
     }

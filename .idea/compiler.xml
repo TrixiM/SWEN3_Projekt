@@ -8,19 +8,20 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="DocumentManagementSystem (2)" />
-        <module name="DocumentManagementSystem (1)" />
         <module name="DocumentManagementSystem" />
         <module name="genai-worker" />
         <module name="OCRWorker" />
+        <module name="document-access-batch-service" />
       </profile>
     </annotationProcessing>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="DocumentManagementSystem" options="-parameters" />
-      <module name="DocumentManagementSystem (1)" options="-parameters" />
+      <module name="DocumentManagementSystem (1)" options="" />
       <module name="DocumentManagementSystem (2)" options="-parameters" />
       <module name="OCRWorker" options="-parameters" />
+      <module name="document-access-batch-service" options="-parameters" />
       <module name="genai-worker" options="-parameters" />
     </option>
   </component>
