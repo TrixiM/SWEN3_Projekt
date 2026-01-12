@@ -1,0 +1,4 @@
+<accessLogs date="2026-01-10" source="external-system-A">
+    <documentAccess documentId="1cac3a7e-756f-4d90-989d-df8b203d6f07" accesses="5"/>
+    <documentAccess documentId="84ef8097-0a4b-409b-9433-562572d672af" accesses="2"/>
+</accessLogs>

@@ -168,8 +168,8 @@ services:
   document-access-batch-service:
     container_name: document-access-batch-service
     build:
-      context: .
-      dockerfile: document-access-batch-service/Dockerfile
+      context: ./document-access-batch-service
+      dockerfile: Dockerfile
     depends_on:
       - postgres
     volumes:

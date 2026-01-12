@@ -19,10 +19,10 @@
     <packaging>pom</packaging>
 
     <modules>
-        <!--<module>backend</module>
+        <!--
         <module>ocr-worker</module>
-        <module>genai-worker</module>-->
-        <module>document-access-batch-service</module>
+        <module>genai-worker</module>
+        <module>document-access-batch-service</module>-->
     </modules>
 
     <properties>
