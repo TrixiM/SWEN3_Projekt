@@ -14,7 +14,7 @@ import static fhtw.wien.config.MessagingConstants.*;
 @Configuration
 public class RabbitMQConfig {
 
-
+    //Producer → Exchange → Queue → Consumer
     @Bean
     public DirectExchange documentExchange() {
         return new DirectExchange(DOCUMENT_EXCHANGE, true, false);
@@ -26,11 +26,26 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Queue documentAccessStatsQueue() {
+        return new Queue(DOCUMENT_ACCESS_STATS_QUEUE, true);
+    }
+
+
+    @Bean //If a message arrives at the documentExchange with the mentioned routing key → deliver it to summaryResultQueue
     public Binding summaryResultBinding(Queue summaryResultQueue, DirectExchange documentExchange) {
         return BindingBuilder.bind(summaryResultQueue)
                 .to(documentExchange)
                 .with(SUMMARY_RESULT_ROUTING_KEY);
     }
+
+    @Bean
+    public Binding documentAccessStatsBinding(Queue documentAccessStatsQueue,
+                                              DirectExchange documentExchange) {
+        return BindingBuilder.bind(documentAccessStatsQueue)
+                .to(documentExchange)
+                .with(DOCUMENT_ACCESS_STATS_ROUTING_KEY);
+    }
+
 
     @Bean
     public MessageConverter jsonMessageConverter() {

@@ -60,7 +60,7 @@ public class DocumentSearchService {
             }else {
                 searchQuery = MultiMatchQuery.of(q -> q
                         .query(queryString)
-                        .fields("title^2", "content")      // boost title higher
+                        .fields("title^2", "summary")      // boost title higher
                         .type(TextQueryType.BestFields)
                         .operator(Operator.And)             // or And for stricter matches
                         .fuzziness("AUTO")                 // AUTO applies fuzziness depending on term length

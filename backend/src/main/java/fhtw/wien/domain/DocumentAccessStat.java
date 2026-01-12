@@ -4,7 +4,10 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.UUID;
 
 @Entity
 @Table(name = "document_access_stats",
@@ -14,8 +17,8 @@ import java.time.LocalDate;
 public class DocumentAccessStat {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "document_id", nullable = false)
@@ -26,6 +29,12 @@ public class DocumentAccessStat {
 
     @Column(name = "access_count", nullable = false)
     private int accessCount;
+
+    public DocumentAccessStat(Document document, int accessCount, Instant date) {
+        this.document=document;
+        this.accessCount=accessCount;
+        this.accessDate=date.atZone(ZoneId.systemDefault()).toLocalDate();
+    }
 
     // getters and setters
 }
