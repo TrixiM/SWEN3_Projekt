@@ -8,6 +8,7 @@
         <option value="$PROJECT_DIR$/pom.xml" />
         <option value="$PROJECT_DIR$/ocr-worker/pom.xml" />
         <option value="$PROJECT_DIR$/genai-worker/pom.xml" />
+        <option value="$PROJECT_DIR$/document-access-batch-service/pom.xml" />
       </list>
     </option>
   </component>

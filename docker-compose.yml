@@ -172,8 +172,6 @@ services:
       dockerfile: Dockerfile
     depends_on:
       - postgres
-    volumes:
-      - ./paperless-batch-service/data/access-logs:/data/access-logs
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/paperless
       SPRING_DATASOURCE_USERNAME: paperless

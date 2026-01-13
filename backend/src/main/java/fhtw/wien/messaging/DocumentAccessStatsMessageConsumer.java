@@ -2,7 +2,7 @@ package fhtw.wien.messaging;
 
 import fhtw.wien.domain.Document;
 import fhtw.wien.domain.DocumentAccessStat;
-import fhtw.wien.dto.DocumentAccessStatDTO;
+import fhtw.wien.dto.DocumentAccessStatDto;
 import fhtw.wien.exception.MessagingException;
 import fhtw.wien.repo.DocumentAccessStatRepo;
 import fhtw.wien.repo.DocumentRepo;
@@ -29,7 +29,7 @@ public class DocumentAccessStatsMessageConsumer {
 
     @RabbitListener (queues=DOCUMENT_ACCESS_STATS_QUEUE)
     @Transactional
-    public void handleAccessStats(DocumentAccessStatDTO dto){
+    public void handleAccessStats(DocumentAccessStatDto dto){
         log.info("Access stats received for document {}", dto.documentId());
 
         if (!idempotencyService.tryMarkAsProcessed(dto.messageId())) {
