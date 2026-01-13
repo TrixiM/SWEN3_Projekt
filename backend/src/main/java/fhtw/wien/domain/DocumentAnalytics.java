@@ -11,6 +11,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.Instant;
 import java.util.UUID;
 
+//definite check for usage
 
 @Entity
 @Table(name = "document_analytics")

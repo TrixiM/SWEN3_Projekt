@@ -2,6 +2,7 @@ package fhtw.wien.domain;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.Instant;
@@ -14,6 +15,7 @@ import java.util.UUID;
         uniqueConstraints = {@UniqueConstraint(columnNames = {"document_id", "access_date"})})
 @Getter
 @Setter
+@NoArgsConstructor
 public class DocumentAccessStat {
 
     @Id
