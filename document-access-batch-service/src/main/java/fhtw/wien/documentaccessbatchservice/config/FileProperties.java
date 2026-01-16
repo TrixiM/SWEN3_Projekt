@@ -9,7 +9,7 @@ import lombok.Data;
 @Data
 @Component
 @ConfigurationProperties(prefix = "batch.files")
-public class FileProperties {
+public class FileProperties { //not used
     private Path inputDir;
     private Path archiveDir;
     private String filePattern;

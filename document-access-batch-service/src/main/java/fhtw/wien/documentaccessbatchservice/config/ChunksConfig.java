@@ -5,6 +5,7 @@ import fhtw.wien.documentaccessbatchservice.batch.reader.DocumentAccessItemReade
 import fhtw.wien.documentaccessbatchservice.batch.writer.DocumentAccessItemWriter;
 import fhtw.wien.documentaccessbatchservice.messaging.DocumentAccessStatProducer;
 import fhtw.wien.documentaccessbatchservice.dto.DocumentAccessStatDto;
+import fhtw.wien.documentaccessbatchservice.xmlModel.AccessStatisticsDateListener;
 import fhtw.wien.documentaccessbatchservice.xmlModel.DocumentAccessXml;
 import jakarta.xml.bind.JAXBException;
 import org.springframework.batch.core.*;
@@ -36,13 +37,20 @@ public class ChunksConfig {
 
     @Bean
     public Step documentAccessStep(JobRepository jobRepository,
-                                   DocumentAccessStatProducer producer, PlatformTransactionManager txManager) throws JAXBException {
+                                   DocumentAccessStatProducer producer,
+                                   PlatformTransactionManager txManager,
+                                   StaxEventItemReader<DocumentAccessXml> documentAccessXmlReader,
+                                   DocumentAccessItemProcessor processor,
+                                   DocumentAccessItemWriter writer,
+                                   AccessStatisticsDateListener dateListener) throws JAXBException {
 
         return new StepBuilder("documentAccessStep", jobRepository)
                 .<DocumentAccessXml, DocumentAccessStatDto>chunk(10, txManager)
-                .reader(new DocumentAccessItemReader(new ClassPathResource("accessLog/accessLog.xml")))
-                .processor(new DocumentAccessItemProcessor())
-                .writer(new DocumentAccessItemWriter(producer))
+                .reader(documentAccessXmlReader)
+                .processor(processor)
+                .writer(writer)
+                .listener(dateListener)
+                .listener(processor)
                 .build();
     }
 }

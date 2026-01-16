@@ -1,43 +1,30 @@
 package fhtw.wien.documentaccessbatchservice.batch.reader;
 
-import fhtw.wien.documentaccessbatchservice.xmlModel.AccessStatisticsXml;
 import fhtw.wien.documentaccessbatchservice.xmlModel.DocumentAccessXml;
-import jakarta.xml.bind.JAXBContext;
-import jakarta.xml.bind.JAXBException;
-import jakarta.xml.bind.Unmarshaller;
-import org.springframework.batch.item.ItemReader;
-import org.springframework.core.io.Resource;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.oxm.jaxb.Jaxb2Marshaller;
+import org.springframework.batch.item.xml.StaxEventItemReader;
+import org.springframework.batch.item.xml.builder.StaxEventItemReaderBuilder;
+import org.springframework.context.annotation.Bean;
+import org.springframework.core.io.FileSystemResource;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.time.LocalDate;
-import java.util.Iterator;
-public class DocumentAccessItemReader implements ItemReader<DocumentAccessXml> {
+@Configuration
+public class DocumentAccessItemReader  {
 
-    private AccessStatisticsXml statistics;
-    private Iterator<DocumentAccessXml> iterator;
-
-    public DocumentAccessItemReader(Resource resource) throws JAXBException {
-        try (InputStream is = resource.getInputStream()) {
-            JAXBContext context = JAXBContext.newInstance(AccessStatisticsXml.class);
-            Unmarshaller unmarshaller = context.createUnmarshaller();
-            this.statistics = (AccessStatisticsXml) unmarshaller.unmarshal(is);
-            this.iterator = statistics.getDocuments().iterator();
-        } catch (IOException e) {
-            throw new IllegalStateException("Failed to read XML resource: " + resource.getDescription(), e);
-        }
+    @Bean
+    public StaxEventItemReader<DocumentAccessXml> itemReader(Jaxb2Marshaller documentUnmarshaller){
+        return new StaxEventItemReaderBuilder<DocumentAccessXml>()
+                .name("documentItemReader")
+                .resource(new FileSystemResource("src/main/resources/accessLog/accessLog.xml"))
+                .addFragmentRootElements("document")
+                .unmarshaller(documentUnmarshaller)
+                .build();
+    }
+    @Bean
+    public Jaxb2Marshaller documentUnmarshaller() {
+        Jaxb2Marshaller marshaller = new Jaxb2Marshaller();
+        marshaller.setClassesToBeBound(DocumentAccessXml.class);
+        return marshaller;
     }
 
-    @Override
-    public DocumentAccessXml read() {
-        if (iterator.hasNext()) {
-            return iterator.next();
-        }
-        return null;
-    }
-
-    public LocalDate getDate() {
-        return statistics.getDate();
-    }
 }

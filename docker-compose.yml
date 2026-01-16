@@ -53,8 +53,14 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./db-users.sql:/docker-entrypoint-initdb.d/db-users.sql
     networks:
       - app-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U myuser -d documentdb" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   pgadmin:
     image: dpage/pgadmin4:latest
@@ -171,11 +177,15 @@ services:
       context: ./document-access-batch-service
       dockerfile: Dockerfile
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/paperless
-      SPRING_DATASOURCE_USERNAME: paperless
-      SPRING_DATASOURCE_PASSWORD: secret
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/documentdb
+      SPRING_DATASOURCE_USERNAME: batchuser
+      SPRING_DATASOURCE_PASSWORD: batchpassword
+    networks:
+      - app-network
+
 
 
 
