@@ -32,10 +32,10 @@ public class DocumentAccessStat {
     @Column(name = "access_count", nullable = false)
     private int accessCount;
 
-    public DocumentAccessStat(Document document, int accessCount, Instant date) {
+    public DocumentAccessStat(Document document, int accessCount, LocalDate date) {
         this.document=document;
         this.accessCount=accessCount;
-        this.accessDate=date.atZone(ZoneId.systemDefault()).toLocalDate();
+        this.accessDate=date;
     }
 
     // getters and setters

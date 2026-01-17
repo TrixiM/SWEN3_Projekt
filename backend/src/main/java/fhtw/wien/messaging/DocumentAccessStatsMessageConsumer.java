@@ -10,10 +10,12 @@ import fhtw.wien.service.IdempotencyService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import static fhtw.wien.config.MessagingConstants.DOCUMENT_ACCESS_STATS_QUEUE;
 
+@Component
 public class DocumentAccessStatsMessageConsumer {
     private static final Logger log = LoggerFactory.getLogger(DocumentAccessStatsMessageConsumer.class);
 

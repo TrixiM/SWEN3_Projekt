@@ -4,6 +4,7 @@ import fhtw.wien.documentaccessbatchservice.xmlModel.DocumentAccessXml;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.oxm.jaxb.Jaxb2Marshaller;
 import org.springframework.batch.item.xml.StaxEventItemReader;
 import org.springframework.batch.item.xml.builder.StaxEventItemReaderBuilder;
@@ -20,7 +21,7 @@ public class DocumentAccessItemReader  {
         log.info("Creating XML item reader for access log");
         return new StaxEventItemReaderBuilder<DocumentAccessXml>()
                 .name("documentItemReader")
-                .resource(new FileSystemResource("src/main/resources/accessLog/accessLog.xml"))
+                .resource(new ClassPathResource("accessLog/accessLog.xml"))
                 .addFragmentRootElements("document")
                 .unmarshaller(documentUnmarshaller)
                 .build();

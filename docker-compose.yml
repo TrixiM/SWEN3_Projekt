@@ -183,6 +183,8 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/documentdb
       SPRING_DATASOURCE_USERNAME: batchuser
       SPRING_DATASOURCE_PASSWORD: batchpassword
+    ports:
+      - "8081:8080"
     networks:
       - app-network
 

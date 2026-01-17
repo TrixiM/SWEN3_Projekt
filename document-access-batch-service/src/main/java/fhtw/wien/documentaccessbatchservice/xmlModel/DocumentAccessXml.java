@@ -7,6 +7,7 @@ import lombok.Getter;
 import java.util.UUID;
 @Getter
 @XmlAccessorType(XmlAccessType.FIELD)
+@XmlRootElement(name = "document")
 public class DocumentAccessXml {
 
     @XmlElement(name = "documentId")
