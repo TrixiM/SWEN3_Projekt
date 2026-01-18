@@ -17,7 +17,7 @@ import java.util.UUID;
 @Table(name = "document_analytics")
 @EntityListeners(AuditingEntityListener.class)
 @Getter @Setter @NoArgsConstructor
-public class DocumentAnalytics {
+public class DocumentAnalytics {//not used
     
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

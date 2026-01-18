@@ -44,11 +44,13 @@ public class DocumentAccessStatsMessageConsumer {
             return new MessagingException("Document not found: " + dto.documentId());
         });
 
-        DocumentAccessStat stat = new DocumentAccessStat(
-                document,
-                dto.accessCount(),
-                dto.date()
-        );
+        DocumentAccessStat stat = documentAccessStatRepo
+                .findByDocumentAndDate(dto.documentId(), dto.date())
+                .map(existing -> {
+                    existing.setAccessCount(dto.accessCount());
+                    return existing;
+                })
+                .orElseGet(() -> new DocumentAccessStat(document, dto.accessCount(), dto.date()));
 
         documentAccessStatRepo.save(stat);
 

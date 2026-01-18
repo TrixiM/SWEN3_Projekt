@@ -22,7 +22,7 @@ public class DocumentAccessItemProcessor
     private static final Logger log =
             LoggerFactory.getLogger(DocumentAccessItemProcessor.class);
 
-    private LocalDate date;
+    private LocalDate date = LocalDate.of(2026,1,29);
 
     public DocumentAccessItemProcessor() {
     }
@@ -33,7 +33,7 @@ public class DocumentAccessItemProcessor
                 item.getDocumentId(), item.getAccessCount(), LocalDate.now());
         return new DocumentAccessStatDto(
                 item.getDocumentId(),
-                LocalDate.now(),
+                date,
                 item.getAccessCount()
         );
     }
