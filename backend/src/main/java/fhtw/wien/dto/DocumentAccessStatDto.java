@@ -9,7 +9,7 @@ public record DocumentAccessStatDto(
         String messageId,
         UUID documentId,
         int accessCount,
-        LocalDate lastAccessedAt
+        LocalDate date
 ) {
 
 }

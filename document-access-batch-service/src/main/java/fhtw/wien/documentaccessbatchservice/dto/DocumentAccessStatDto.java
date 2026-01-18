@@ -6,10 +6,10 @@ import java.util.UUID;
 public record DocumentAccessStatDto(
         String messageId,
         UUID documentId,
-        LocalDate date,
-        int accessCount
-) {
+        int accessCount,
+        LocalDate date
+        ) {
     public DocumentAccessStatDto(UUID documentId, LocalDate date, int accessCount) {
-        this(UUID.randomUUID().toString(), documentId, date, accessCount);
+        this(UUID.randomUUID().toString(), documentId, accessCount, date);
     }
 }

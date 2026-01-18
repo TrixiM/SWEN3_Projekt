@@ -37,8 +37,8 @@ public class DocumentAccessItemProcessor
 
     @Override
     public DocumentAccessStatDto process(DocumentAccessXml item) {
-        log.debug("Processing document {} with accessCount {}",
-                item.getDocumentId(), item.getAccessCount());
+        log.debug("Processing document {} with accessCount {} from {}",
+                item.getDocumentId(), item.getAccessCount(), date);
         return new DocumentAccessStatDto(
                 item.getDocumentId(),
                 date,

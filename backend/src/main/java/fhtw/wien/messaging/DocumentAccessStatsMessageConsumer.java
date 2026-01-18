@@ -47,7 +47,7 @@ public class DocumentAccessStatsMessageConsumer {
         DocumentAccessStat stat = new DocumentAccessStat(
                 document,
                 dto.accessCount(),
-                dto.lastAccessedAt()
+                dto.date()
         );
 
         documentAccessStatRepo.save(stat);
