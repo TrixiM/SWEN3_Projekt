@@ -14,6 +14,7 @@ import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
+import org.springframework.batch.item.file.MultiResourceItemReader;
 import org.springframework.batch.item.xml.StaxEventItemReader;
 import org.springframework.batch.support.transaction.ResourcelessTransactionManager;
 import org.springframework.context.annotation.Bean;
@@ -36,19 +37,16 @@ public class ChunksConfig {
 
     @Bean
     public Step documentAccessStep(JobRepository jobRepository,
-                                   DocumentAccessStatProducer producer,
                                    PlatformTransactionManager txManager,
-                                   StaxEventItemReader<DocumentAccessXml> documentAccessXmlReader,
+                                   MultiResourceItemReader<DocumentAccessXml> multiResourceItemReader,
                                    DocumentAccessItemProcessor processor,
-                                   DocumentAccessItemWriter writer,
-                                   AccessStatisticsDateListener dateListener) throws JAXBException {
+                                   DocumentAccessItemWriter writer) throws JAXBException {
 
         return new StepBuilder("documentAccessStep", jobRepository)
                 .<DocumentAccessXml, DocumentAccessStatDto>chunk(10, txManager)
-                .reader(documentAccessXmlReader)
+                .reader(multiResourceItemReader)
                 .processor(processor)
                 .writer(writer)
-                .listener(dateListener)
                 .listener(processor)
                 .build();
     }

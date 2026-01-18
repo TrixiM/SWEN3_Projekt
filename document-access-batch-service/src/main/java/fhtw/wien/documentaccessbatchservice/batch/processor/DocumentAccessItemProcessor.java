@@ -27,21 +27,13 @@ public class DocumentAccessItemProcessor
     public DocumentAccessItemProcessor() {
     }
 
-    @BeforeStep
-    public void beforeStep(StepExecution stepExecution) {
-        this.date = (LocalDate) stepExecution
-                .getExecutionContext()
-                .get("accessDate");
-        log.info("Processing access statistics for date {}", date);
-    }
-
     @Override
     public DocumentAccessStatDto process(DocumentAccessXml item) {
         log.debug("Processing document {} with accessCount {} from {}",
-                item.getDocumentId(), item.getAccessCount(), date);
+                item.getDocumentId(), item.getAccessCount(), LocalDate.now());
         return new DocumentAccessStatDto(
                 item.getDocumentId(),
-                date,
+                LocalDate.now(),
                 item.getAccessCount()
         );
     }
