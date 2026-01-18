@@ -1,5 +1,6 @@
 package fhtw.wien.documentaccessbatchservice.config;
 
+import fhtw.wien.documentaccessbatchservice.batch.ArchiveTasklet;
 import fhtw.wien.documentaccessbatchservice.batch.processor.DocumentAccessItemProcessor;
 import fhtw.wien.documentaccessbatchservice.batch.writer.DocumentAccessItemWriter;
 import fhtw.wien.documentaccessbatchservice.dto.DocumentAccessStatDto;
@@ -20,12 +21,15 @@ public class ChunksConfig {
 
     @Bean
     public Job documentAccessJob(JobRepository jobRepository,
-                                 Step documentAccessStep) {
+                                 Step documentAccessStep,
+                                 Step archiveStep) {
         return new JobBuilder("documentAccessJob", jobRepository)
                 .incrementer(new RunIdIncrementer())
                 .start(documentAccessStep)
+                .next(archiveStep)
                 .build();
     }
+
 
     @Bean
     public Step documentAccessStep(JobRepository jobRepository,
@@ -40,6 +44,13 @@ public class ChunksConfig {
                 .processor(processor)
                 .writer(writer)
                 .listener(processor)
+                .build();
+    }
+
+    @Bean
+    public Step archiveStep(JobRepository jobRepository, PlatformTransactionManager txManager, ArchiveTasklet archiveTasklet) {
+        return new StepBuilder("archiveStep", jobRepository)
+                .tasklet(archiveTasklet, txManager)
                 .build();
     }
 }

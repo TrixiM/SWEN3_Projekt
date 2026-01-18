@@ -87,6 +87,10 @@ services:
       - "15672:15672"
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping || exit 1"]
+      timeout: 5s
+      retries: 5
 
   ocr-worker:
     build:
@@ -179,12 +183,16 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/documentdb
       SPRING_DATASOURCE_USERNAME: batchuser
       SPRING_DATASOURCE_PASSWORD: batchpassword
     ports:
       - "8081:8080"
+    volumes:
+      - ./document-access-batch-service/accessLog:/app/accessLog
     networks:
       - app-network
 

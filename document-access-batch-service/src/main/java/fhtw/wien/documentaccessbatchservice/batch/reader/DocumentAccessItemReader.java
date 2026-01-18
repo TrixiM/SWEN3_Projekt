@@ -28,11 +28,10 @@ public class DocumentAccessItemReader  {
 
         reader.setResources(
                 new PathMatchingResourcePatternResolver()
-                        .getResources("classpath*:accessLog/*.xml")
+                        .getResources("file:/app/accessLog/*.xml")
         );
 
         reader.setDelegate(documentXmlReader);
-        reader.setStrict(true);
 
         return reader;
     }
@@ -57,6 +56,7 @@ public class DocumentAccessItemReader  {
                 .name("documentItemReader")
                 .addFragmentRootElements("document")
                 .unmarshaller(documentUnmarshaller)
+                .strict(false)
                 .build();
     }
 
