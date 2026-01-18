@@ -1,6 +1,8 @@
 package fhtw.wien.controller;
 
 import fhtw.wien.domain.Document;
+import fhtw.wien.domain.DocumentAccessStat;
+import fhtw.wien.dto.DocumentAccessStatDto;
 import fhtw.wien.exception.InvalidRequestException;
 import fhtw.wien.service.DocumentService;
 import fhtw.wien.service.MinIOStorageService;
@@ -171,6 +173,11 @@ public class DocumentController {
     @GetMapping("{id}/pages/count")
     public ResponseEntity<Integer> getPageCount(@PathVariable UUID id) {
         return ResponseEntity.ok(service.getPdfPageCount(id));
+    }
+
+    @GetMapping("{id}/accessCount")
+    public List<DocumentAccessStatDto> getAccessStatOfDocID(@PathVariable UUID id) {
+        return service.getAccessStat(id);
     }
 
     @DeleteMapping("{id}")

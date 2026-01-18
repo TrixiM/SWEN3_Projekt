@@ -1,10 +1,13 @@
 package fhtw.wien.business;
 
 import fhtw.wien.domain.Document;
+import fhtw.wien.domain.DocumentAccessStat;
+import fhtw.wien.dto.DocumentAccessStatDto;
 import fhtw.wien.exception.BusinessLogicException;
 import fhtw.wien.exception.DataAccessException;
 import fhtw.wien.exception.InvalidRequestException;
 import fhtw.wien.exception.NotFoundException;
+import fhtw.wien.repo.DocumentAccessStatRepo;
 import fhtw.wien.repo.DocumentRepo;
 import fhtw.wien.service.MinIOStorageService;
 import org.slf4j.Logger;
@@ -22,10 +25,12 @@ public class DocumentBusinessLogic {
     private static final Logger log = LoggerFactory.getLogger(DocumentBusinessLogic.class);
 
     private final DocumentRepo repository;
+    private final DocumentAccessStatRepo accessStatRepo;
     private final MinIOStorageService minioStorageService;
 
-    public DocumentBusinessLogic(DocumentRepo repository, MinIOStorageService minioStorageService) {
+    public DocumentBusinessLogic(DocumentRepo repository, DocumentAccessStatRepo accessStatRepo, MinIOStorageService minioStorageService) {
         this.repository = repository;
+        this.accessStatRepo = accessStatRepo;
         this.minioStorageService = minioStorageService;
     }
 
@@ -33,40 +38,40 @@ public class DocumentBusinessLogic {
      * Creates or updates a document. For new documents, uploads PDF to MinIO storage.
      * Uses InputStream to stream data directly to MinIO without loading into memory.
      *
-     * @param doc the document metadata
+     * @param doc       the document metadata
      * @param pdfStream the PDF content as InputStream (null for updates without file changes)
      * @return the saved document with storage metadata
      */
     @Transactional
     public Document createOrUpdateDocument(Document doc, InputStream pdfStream) {
         validateDocument(doc);
-        
+
         try {
             // For new documents, upload to MinIO first
             if (doc.getId() == null && pdfStream != null) {
-                
+
                 // Generate ID for new document
                 doc.setId(UUID.randomUUID());
-                
+
                 // Upload to MinIO and get object key (streaming directly without intermediate byte[])
                 String objectKey = minioStorageService.uploadDocument(
-                    doc.getId(), 
-                    doc.getOriginalFilename(), 
-                    doc.getContentType(), 
-                    pdfStream,
-                    doc.getSizeBytes()
+                        doc.getId(),
+                        doc.getOriginalFilename(),
+                        doc.getContentType(),
+                        pdfStream,
+                        doc.getSizeBytes()
                 );
-                
+
                 // Update document with MinIO info
                 doc.setBucket(minioStorageService.getBucketName());
                 doc.setObjectKey(objectKey);
                 doc.setStorageUri(String.format("minio://%s/%s", doc.getBucket(), objectKey));
             }
-            
+
             Document saved = repository.save(doc);
             log.info("Document saved: id={}, objectKey={}", saved.getId(), saved.getObjectKey());
             return saved;
-            
+
         } catch (Exception e) {
             log.error("Failed to save document", e);
             // If MinIO upload succeeded but DB save failed, clean up MinIO
@@ -93,6 +98,20 @@ public class DocumentBusinessLogic {
     public List<Document> getAllDocuments() {
         return repository.findAll();
     }
+
+    @Transactional(readOnly = true)
+    public List<DocumentAccessStatDto> getDocumentAccessStats(UUID documentId) {
+        return accessStatRepo.findByDocumentId(documentId)
+                .stream()
+                .map(stat -> new DocumentAccessStatDto(
+                        stat.getId().toString(),
+                        stat.getDocument().getId(),   // safe inside TX
+                        stat.getAccessCount(),
+                        stat.getAccessDate()
+                ))
+                .toList();
+    }
+
 
     @Transactional
     public void deleteDocument(UUID id) {

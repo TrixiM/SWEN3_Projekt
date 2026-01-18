@@ -3,6 +3,8 @@ package fhtw.wien.service;
 import fhtw.wien.business.DocumentBusinessLogic;
 import fhtw.wien.business.PdfRenderingBusinessLogic;
 import fhtw.wien.domain.Document;
+import fhtw.wien.domain.DocumentAccessStat;
+import fhtw.wien.dto.DocumentAccessStatDto;
 import fhtw.wien.exception.ServiceException;
 import fhtw.wien.messaging.DocumentMessageProducer;
 import org.slf4j.Logger;
@@ -73,6 +75,9 @@ public class DocumentService {
         return documentBusinessLogic.getAllDocuments();
     }
 
+    public List<DocumentAccessStatDto> getAccessStat(UUID documentId){
+        return documentBusinessLogic.getDocumentAccessStats(documentId);
+    }
     public void delete(UUID id) {
         try {
             documentBusinessLogic.deleteDocument(id);

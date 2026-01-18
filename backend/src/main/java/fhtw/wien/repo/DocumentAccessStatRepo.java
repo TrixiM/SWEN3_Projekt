@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -13,5 +14,9 @@ public interface DocumentAccessStatRepo extends JpaRepository<DocumentAccessStat
     @Query("SELECT s FROM DocumentAccessStat s WHERE s.document.id = :documentId AND s.accessDate = :accessDate")
     Optional<DocumentAccessStat> findByDocumentAndDate(@Param("documentId") UUID documentId,
                                                        @Param("accessDate") LocalDate accessDate);
+
+    @Query("SELECT s FROM DocumentAccessStat s WHERE s.document.id = :documentId")
+    List<DocumentAccessStat> findByDocumentId(@Param("documentId") UUID documentId);
+
 
 }
