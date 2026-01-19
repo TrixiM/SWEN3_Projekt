@@ -3,13 +3,17 @@ package fhtw.wien.integration;
 import fhtw.wien.domain.Document;
 import fhtw.wien.dto.SummaryResultDto;
 import fhtw.wien.messaging.DocumentMessageConsumer;
+import fhtw.wien.messaging.DocumentMessageProducer;
 import fhtw.wien.repo.DocumentRepo;
+import fhtw.wien.service.DocumentMessageService;
 import fhtw.wien.service.IdempotencyService;
+import fhtw.wien.service.MinIOStorageService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
@@ -25,6 +29,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -55,6 +61,18 @@ class DocumentUploadIntegTest {
                  }
              };
          }
+
+
+         @Bean
+         @Primary
+         DocumentMessageService fakeMessageService() {
+             return new DocumentMessageService() {
+                 @Override
+                 public void publishDocumentCreated(Document document) {}
+                 @Override
+                 public void deleteDocument(UUID id) {}
+             };
+         }
      }
 
     @Autowired
@@ -65,6 +83,9 @@ class DocumentUploadIntegTest {
 
     @Autowired
     DocumentMessageConsumer consumer;
+
+    @MockBean
+    private MinIOStorageService minIOStorageService;
 
     @Container
     static PostgreSQLContainer<?> postgresContainer = new PostgreSQLContainer<>("postgres:16")
@@ -85,6 +106,10 @@ class DocumentUploadIntegTest {
      */
     @Test
     void shouldUploadAndProcessPdfDocument() throws Exception {
+        when(minIOStorageService.getBucketName()).thenReturn("documents");
+
+        when(minIOStorageService.uploadDocument(any(), anyString(), anyString(), any(), anyLong()))
+                .thenReturn("documents/testbucket/test-object");
 
         MockMultipartFile pdf =
                 new MockMultipartFile(
@@ -94,7 +119,7 @@ class DocumentUploadIntegTest {
                         "dummy pdf content".getBytes()
                 );
 
-        mockMvc.perform(multipart("/documents")
+        mockMvc.perform(multipart("/v1/documents")
                         .file(pdf)
                         .param("title", "Test PDF"))
                 .andExpect(status().isCreated());
@@ -109,10 +134,11 @@ class DocumentUploadIntegTest {
                         5
                 )
         );
+        Document updated = repository.findById(doc.getId()).orElseThrow();
 
-        assertThat(doc.getTitle()).isEqualTo("document.pdf");
-        //assertThat(doc.getContent()).isEqualTo("Extracted OCR text");
-        assertThat(doc.getSummary()).isEqualTo("Generated summary");
+        assertThat(updated.getTitle()).isEqualTo("Test PDF");
+        assertThat(updated.getOriginalFilename()).isEqualTo("document.pdf");
+        assertThat(updated.getSummary()).isEqualTo("Generated summary by GenAI Worker");
 
     }
 
@@ -122,6 +148,11 @@ class DocumentUploadIntegTest {
      */
     @Test
     void shouldUploadDocumentWithoutOcrIfNotPDF() throws Exception {
+        when(minIOStorageService.getBucketName()).thenReturn("documents");
+
+        when(minIOStorageService.uploadDocument(any(), anyString(), anyString(), any(), anyLong()))
+                .thenReturn("documents/testbucket/test-object");
+
         MockMultipartFile txt =
                 new MockMultipartFile(
                         "file",
@@ -130,14 +161,15 @@ class DocumentUploadIntegTest {
                         "some text".getBytes()
                 );
 
-        mockMvc.perform(multipart("/documents")
+        mockMvc.perform(multipart("/v1/documents")
                         .file(txt)
                         .param("title", "Text file"))
                 .andExpect(status().isCreated());
 
         Document doc = repository.findAll().get(0);
 
-        assertThat(doc.getTitle()).isEqualTo("notes.txt");
+        assertThat(doc.getTitle()).isEqualTo("Text file");
+        assertThat(doc.getOriginalFilename()).isEqualTo("notes.txt");
         //assertThat(doc.getOcrText()).isNull();
         assertThat(doc.getSummary()).isNull();
     }
@@ -148,25 +180,28 @@ class DocumentUploadIntegTest {
      */
     @Test
     void shouldKeepSummaryContentBlankIfOcrFails() throws Exception {
+        when(minIOStorageService.getBucketName()).thenReturn("documents");
 
+        when(minIOStorageService.uploadDocument(any(), anyString(), anyString(), any(), anyLong()))
+                .thenReturn("documents/testbucket/test-object");
         MockMultipartFile brokenPdf =
             new MockMultipartFile(
                     "file",
                     "broken.pdf",
                     MediaType.APPLICATION_PDF_VALUE,
-                    new byte[0]   // forces OCR failure
+                    "not a pdf content".getBytes()
             );
 
-        mockMvc.perform(multipart("/documents")
+        mockMvc.perform(multipart("/v1/documents")
                         .file(brokenPdf)
                         .param("title", "Broken PDF"))
                 .andExpect(status().isCreated());
 
         Document doc = repository.findAll().get(0);
 
-        assertThat(doc.getTitle()).isEqualTo("broken.pdf");
-        //assertThat(doc.getOcrText()).isNull();
-        assertThat(doc.getSummary()).isNull();
+        assertThat(doc.getTitle()).isEqualTo("Broken PDF");
+        assertThat(doc.getOriginalFilename()).isEqualTo("broken.pdf");
+        assertThat(doc.getSummary()).isNull(); //summary would only be not null if content is not null
     }
 
 }

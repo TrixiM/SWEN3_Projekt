@@ -158,8 +158,12 @@ public class DocumentBusinessLogic {
             log.error("Document has no MinIO object key: {}", document.getId());
             throw new DataAccessException("Document content not available - missing storage reference");
         }
-        
-        return minioStorageService.downloadDocument(document.getObjectKey());
+
+        try {
+            return minioStorageService.downloadDocument(document.getObjectKey());
+        } catch (Exception e) {
+            throw new DataAccessException("Failed to download document from MinIO", e);
+        }
     }
     
     /**

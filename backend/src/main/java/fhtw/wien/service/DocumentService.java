@@ -5,6 +5,7 @@ import fhtw.wien.business.PdfRenderingBusinessLogic;
 import fhtw.wien.domain.Document;
 import fhtw.wien.domain.DocumentAccessStat;
 import fhtw.wien.dto.DocumentAccessStatDto;
+import fhtw.wien.exception.NotFoundException;
 import fhtw.wien.exception.ServiceException;
 import fhtw.wien.messaging.DocumentMessageProducer;
 import org.slf4j.Logger;
@@ -32,21 +33,21 @@ public class DocumentService {
 
     private final DocumentBusinessLogic documentBusinessLogic;
     private final PdfRenderingBusinessLogic pdfRenderingBusinessLogic;
-    private final DocumentMessageProducer messageProducer;
+    private final DocumentMessageService messageService;
 
     public DocumentService(DocumentBusinessLogic documentBusinessLogic,
                           PdfRenderingBusinessLogic pdfRenderingBusinessLogic,
-                          DocumentMessageProducer messageProducer) {
+                          DocumentMessageService messageService) {
         this.documentBusinessLogic = documentBusinessLogic;
         this.pdfRenderingBusinessLogic = pdfRenderingBusinessLogic;
-        this.messageProducer = messageProducer;
+        this.messageService = messageService;
     }
 
 
     public Document create(Document doc, InputStream pdfStream) {
         try {
             Document created = documentBusinessLogic.createOrUpdateDocument(doc, pdfStream);
-            messageProducer.publishDocumentCreated(created);
+            messageService.publishDocumentCreated(created);
             return created;
         } catch (Exception e) {
             log.error("Failed to create document: {}", doc.getTitle(), e);
@@ -81,8 +82,10 @@ public class DocumentService {
     public void delete(UUID id) {
         try {
             documentBusinessLogic.deleteDocument(id);
-            messageProducer.deleteDocument(id);
+            messageService.deleteDocument(id);
             log.debug("Document deleted: id={}", id);
+        } catch (NotFoundException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Failed to delete document with ID: {}", id, e);
             throw new ServiceException("Failed to delete document", e);

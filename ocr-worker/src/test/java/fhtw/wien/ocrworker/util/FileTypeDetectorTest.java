@@ -46,8 +46,9 @@ class FileTypeDetectorTest {
     @Test
     void detectFileType_WithJpegMagicNumber_ShouldReturnImage() throws IOException {
         // JPEG magic number
-        byte[] jpegMagicNumber = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF};
-        
+        byte[] jpegMagicNumber = {
+                (byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0
+        };
         try (ByteArrayInputStream inputStream = new ByteArrayInputStream(jpegMagicNumber)) {
             FileTypeDetector.FileType result = fileTypeDetector.detectFileType(inputStream);
             assertEquals(FileTypeDetector.FileType.IMAGE, result);

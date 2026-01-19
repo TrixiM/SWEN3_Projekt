@@ -152,8 +152,10 @@ public class DocumentController {
             throw new InvalidRequestException("Page number must be greater than 0");
         }
 
-        if(!service.get(id).getContentType().contains("application/pdf") && pageNumber == 1) {
-            byte[] imageBytes = service.getDocumentContent(service.get(id));
+        Document doc = service.get(id);
+
+        if(!doc.getContentType().contains("application/pdf") && pageNumber == 1) {
+            byte[] imageBytes = service.getDocumentContent(doc);
 
             return ResponseEntity.ok()
                     .contentType(MediaType.IMAGE_PNG)

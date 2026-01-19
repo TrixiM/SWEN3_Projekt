@@ -4,6 +4,7 @@ import static fhtw.wien.config.MessagingConstants.*;
 
 import fhtw.wien.domain.Document;
 import fhtw.wien.exception.MessagingException;
+import fhtw.wien.service.DocumentMessageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -12,7 +13,7 @@ import org.springframework.stereotype.Component;
 import java.util.UUID;
 
 @Component
-public class DocumentMessageProducer {
+public class DocumentMessageProducer implements DocumentMessageService {
 
     private static final Logger log = LoggerFactory.getLogger(DocumentMessageProducer.class);
 
@@ -22,6 +23,7 @@ public class DocumentMessageProducer {
         this.rabbitTemplate = rabbitTemplate;
     }
 
+    @Override
     public void publishDocumentCreated(Document document) {
         log.info("Publishing document created event for document ID: {}", document.getId());
         try {
@@ -36,7 +38,7 @@ public class DocumentMessageProducer {
             throw new MessagingException("Failed to publish document created event", e);
         }
     }
-
+    @Override
     public void deleteDocument(UUID id) {
         log.info("Deleting elasticsearch index of document with ID: {}", id);
         try{

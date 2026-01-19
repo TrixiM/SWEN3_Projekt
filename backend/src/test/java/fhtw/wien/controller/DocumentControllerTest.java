@@ -5,6 +5,7 @@ import fhtw.wien.domain.Document;
 import fhtw.wien.domain.DocumentStatus;
 import fhtw.wien.exception.NotFoundException;
 import fhtw.wien.service.DocumentService;
+import fhtw.wien.service.MinIOStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +36,10 @@ class DocumentControllerTest {
 
     @MockBean
     private DocumentService documentService;
+
+    @MockBean
+    private MinIOStorageService minIOStorageService;
+
 
     private Document testDocument;
     private UUID testId;
@@ -176,7 +181,12 @@ class DocumentControllerTest {
         int pageNumber = 1;
         float scale = 1.5f;
 
-        when(documentService.renderPdfPage(testId, pageNumber, scale)).thenReturn(imageData);
+        Document document = new Document();
+        document.setId(testId);
+        document.setContentType(MediaType.IMAGE_PNG_VALUE);
+
+        when(documentService.get(testId)).thenReturn(document);
+        when(documentService.getDocumentContent(any(Document.class))).thenReturn(imageData);
 
         mockMvc.perform(get("/v1/documents/{id}/pages/{pageNumber}", testId, pageNumber)
                         .param("scale", String.valueOf(scale)))
@@ -184,8 +194,9 @@ class DocumentControllerTest {
                 .andExpect(content().contentType(MediaType.IMAGE_PNG))
                 .andExpect(content().bytes(imageData));
 
-        verify(documentService, times(1)).renderPdfPage(testId, pageNumber, scale);
+        verify(documentService, times(1)).getDocumentContent(any(Document.class));
     }
+
 
     @Test
     void renderPage_WithInvalidPageNumber_ShouldReturnBadRequest() throws Exception {
