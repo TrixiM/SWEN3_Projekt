@@ -5,7 +5,7 @@ import {
     apiRequest 
 } from './utils.js';
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async() => {
     const stored = localStorage.getItem("selectedDocument");
     if (!stored) return;
 
@@ -23,9 +23,14 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("updated").value = new Date(doc.updatedAt).toLocaleString();
         document.getElementById("checksum").value = doc.checksum || "—";
         document.getElementById("summary").value = doc.summary || "No summary available.";
+
+
     }
 
     fillFields();
+    if (doc.id) {
+        await loadAccessStatistics(doc.id);
+    }
 
     // Auto-refresh document data to check for summary updates
     let refreshInterval;
@@ -88,6 +93,48 @@ document.addEventListener("DOMContentLoaded", () => {
     const cancelBtn = document.getElementById("cancel");
     const saveBtn = document.getElementById("save");
     const home = document.getElementById("home");
+
+    async function loadAccessStatistics(documentId) {
+        const tableBody = document.getElementById("access-stats-table");
+        const emptyState = document.getElementById("access-stats-empty");
+
+        try {
+            const stats = await apiRequest(
+                API_CONFIG.ENDPOINTS.ACCESS_STATS_BY_DOC_ID(documentId)
+            );
+
+            tableBody.innerHTML = "";
+
+            if (!stats || stats.length === 0) {
+                emptyState.classList.remove("hidden");
+                return;
+            }
+
+            emptyState.classList.add("hidden");
+
+            stats.forEach(stat => {
+                const row = document.createElement("tr");
+
+                row.innerHTML = `
+                <td class="px-4 py-3 text-sm">
+                    ${new Date(stat.date).toLocaleDateString()}
+                </td>
+                <td class="px-4 py-3 text-sm font-medium">
+                    ${stat.accessCount}
+                </td>
+            `;
+
+                tableBody.appendChild(row);
+            });
+
+        } catch (error) {
+            console.error("Failed to load access statistics:", error);
+            showMessage(
+                "Could not load document access statistics",
+                TOAST_TYPES.ERROR
+            );
+        }
+    }
 
     // Delete a document
     async function deleteDocument(documentId) {

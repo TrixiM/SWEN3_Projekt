@@ -16,7 +16,9 @@ export const API_CONFIG = {
         SEARCH: (query) => `/documents/search?q=${encodeURIComponent(query)}`,
         // Fuzzy full-text search endpoint (title + content, typo-tolerant)
         FUZZY_SEARCH: (query, fuzziness = 'AUTO') =>
-            `/documents/search/fuzzy?q=${encodeURIComponent(query)}&fuzziness=${encodeURIComponent(fuzziness)}`
+            `/documents/search/fuzzy?q=${encodeURIComponent(query)}&fuzziness=${encodeURIComponent(fuzziness)}`,
+        ACCESS_STATS_BY_DOC_ID: (id) => `/documents/${id}/accessCount`,
+
     }
 };
 
