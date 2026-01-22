@@ -3,16 +3,29 @@ package fhtw.wien.service;
 import fhtw.wien.business.DocumentBusinessLogic;
 import fhtw.wien.business.PdfRenderingBusinessLogic;
 import fhtw.wien.domain.Document;
-import fhtw.wien.dto.DocumentResponse;
+import fhtw.wien.domain.DocumentAccessStat;
+import fhtw.wien.dto.DocumentAccessStatDto;
+import fhtw.wien.exception.NotFoundException;
 import fhtw.wien.exception.ServiceException;
 import fhtw.wien.messaging.DocumentMessageProducer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.io.InputStream;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Service layer for document operations.
+ * <p>
+ * Responsibilities:
+ * <ul>
+ *   <li>Delegating business operations to DocumentBusinessLogic</li>
+ *   <li>Publishing RabbitMQ messages after successful operations</li>
+ *   <li>Exception translation and logging</li>
+ * </ul>
+ */
 @Service
 public class DocumentService {
 
@@ -20,26 +33,21 @@ public class DocumentService {
 
     private final DocumentBusinessLogic documentBusinessLogic;
     private final PdfRenderingBusinessLogic pdfRenderingBusinessLogic;
-    private final DocumentMessageProducer messageProducer;
+    private final DocumentMessageService messageService;
 
     public DocumentService(DocumentBusinessLogic documentBusinessLogic,
                           PdfRenderingBusinessLogic pdfRenderingBusinessLogic,
-                          DocumentMessageProducer messageProducer) {
+                          DocumentMessageService messageService) {
         this.documentBusinessLogic = documentBusinessLogic;
         this.pdfRenderingBusinessLogic = pdfRenderingBusinessLogic;
-        this.messageProducer = messageProducer;
+        this.messageService = messageService;
     }
 
-    public Document create(Document doc) {
-        log.info("Creating document with title: {}", doc.getTitle());
+
+    public Document create(Document doc, InputStream pdfStream) {
         try {
-            Document created = documentBusinessLogic.createOrUpdateDocument(doc);
-            log.info("Document created with ID: {}", created.getId());
-            
-            // Publish message after document is created
-            DocumentResponse response = toDocumentResponse(created);
-            messageProducer.publishDocumentCreated(response);
-            
+            Document created = documentBusinessLogic.createOrUpdateDocument(doc, pdfStream);
+            messageService.publishDocumentCreated(created);
             return created;
         } catch (Exception e) {
             log.error("Failed to create document: {}", doc.getTitle(), e);
@@ -48,13 +56,10 @@ public class DocumentService {
     }
 
     public Document update(Document doc) {
-        log.info("Updating document with ID: {}", doc.getId());
         try {
-            Document updated = documentBusinessLogic.createOrUpdateDocument(doc);
-            log.info("Document updated with ID: {}", updated.getId());
+            Document updated = documentBusinessLogic.createOrUpdateDocument(doc, null);
             
-            // Publish message after document is updated
-            DocumentResponse response = toDocumentResponse(updated);
+            log.debug("Document updated: id={}", updated.getId());
             
             return updated;
         } catch (Exception e) {
@@ -64,83 +69,41 @@ public class DocumentService {
     }
 
     public Document get(UUID id) {
-        log.debug("Retrieving document with ID: {}", id);
-        try {
-            return documentBusinessLogic.getDocumentById(id);
-        } catch (Exception e) {
-            log.error("Failed to retrieve document with ID: {}", id, e);
-            throw e; // Re-throw to preserve original exception type (e.g., NotFoundException)
-        }
+        return documentBusinessLogic.getDocumentById(id);
     }
 
     public List<Document> getAll() {
-        log.debug("Retrieving all documents");
-        try {
-            List<Document> documents = documentBusinessLogic.getAllDocuments();
-            log.debug("Retrieved {} documents", documents.size());
-            return documents;
-        } catch (Exception e) {
-            log.error("Failed to retrieve documents", e);
-            throw new ServiceException("Failed to retrieve documents", e);
-        }
+        return documentBusinessLogic.getAllDocuments();
     }
 
+    public List<DocumentAccessStatDto> getAccessStat(UUID documentId){
+        return documentBusinessLogic.getDocumentAccessStats(documentId);
+    }
     public void delete(UUID id) {
-        log.info("Deleting document with ID: {}", id);
         try {
             documentBusinessLogic.deleteDocument(id);
-            log.info("Document deleted with ID: {}", id);
-            
-            // Publish message after document is deleted
-            messageProducer.publishDocumentDeleted(id);
+            messageService.deleteDocument(id);
+            log.debug("Document deleted: id={}", id);
+        } catch (NotFoundException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Failed to delete document with ID: {}", id, e);
             throw new ServiceException("Failed to delete document", e);
         }
     }
 
-    private DocumentResponse toDocumentResponse(Document d) {
-        return new DocumentResponse(
-                d.getId(),
-                d.getTitle(),
-                d.getOriginalFilename(),
-                d.getContentType(),
-                d.getSizeBytes(),
-                d.getBucket(),
-                d.getObjectKey(),
-                d.getStorageUri(),
-                d.getChecksumSha256(),
-                d.getStatus(),
-                d.getTags(),
-                d.getVersion(),
-                d.getCreatedAt(),
-                d.getUpdatedAt()
-        );
-    }
 
     public byte[] renderPdfPage(UUID id, int pageNumber, float scale) {
-        log.info("Rendering page {} of document {} with scale {}", pageNumber, id, scale);
-        try {
-            var doc = documentBusinessLogic.getDocumentById(id);
-            byte[] renderedPage = pdfRenderingBusinessLogic.renderPdfPage(doc, pageNumber, scale);
-            log.debug("Successfully rendered page {} for document {}", pageNumber, id);
-            return renderedPage;
-        } catch (Exception e) {
-            log.error("Failed to render page {} of document {}", pageNumber, id, e);
-            throw e; // Re-throw to preserve original exception type
-        }
+        var doc = documentBusinessLogic.getDocumentById(id);
+        return pdfRenderingBusinessLogic.renderPdfPage(doc, pageNumber, scale);
     }
 
     public int getPdfPageCount(UUID id) {
-        log.debug("Getting page count for document {}", id);
-        try {
-            var doc = documentBusinessLogic.getDocumentById(id);
-            int pageCount = pdfRenderingBusinessLogic.getPdfPageCount(doc);
-            log.debug("Document {} has {} pages", id, pageCount);
-            return pageCount;
-        } catch (Exception e) {
-            log.error("Failed to get page count for document {}", id, e);
-            throw e; // Re-throw to preserve original exception type
-        }
+        var doc = documentBusinessLogic.getDocumentById(id);
+        return pdfRenderingBusinessLogic.getPdfPageCount(doc);
+    }
+
+    public byte[] getDocumentContent(Document document) {
+        return documentBusinessLogic.getDocumentContent(document);
     }
 }

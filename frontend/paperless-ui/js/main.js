@@ -1,5 +1,14 @@
-// API base URL - nginx proxies /api/ to backend service
-const API_BASE = '/api';
+import {
+    API_CONFIG,
+    apiRequest,
+    debounce,
+    escapeHtml,
+    formatBytes,
+    formatDate,
+    showMessage,
+    TOAST_TYPES,
+    validateFile
+} from './utils.js';
 
 // DOM elements
 let documentsTbody;
@@ -12,6 +21,14 @@ let filterStatus;
 // Store all documents for filtering
 let allDocuments = [];
 
+// Constants
+const FILTER_DEBOUNCE_DELAY = 300;
+const SIZE_FILTERS = {
+    SMALL: { max: 1024 * 1024 }, // < 1MB
+    MEDIUM: { min: 1024 * 1024, max: 10 * 1024 * 1024 }, // 1-10MB
+    LARGE: { min: 10 * 1024 * 1024 } // > 10MB
+};
+
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
     initializeDOM();
@@ -21,6 +38,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function initializeDOM() {
     documentsTbody = document.getElementById('documents-tbody');
+    console.log('documentsTbody:', documentsTbody); //log for debugging
     fileInput = document.querySelector('input[type="file"]');
     searchInput = document.getElementById('search-input');
     filterContentType = document.getElementById('filter-content-type');
@@ -29,14 +47,17 @@ function initializeDOM() {
 }
 
 function setupEventListeners() {
+    const debouncedFilter = debounce(filterDocuments, FILTER_DEBOUNCE_DELAY); //Creates a version of filterDocuments that only runs after the user stops triggering it for a set delay.
+
+
     // File upload on file input change
     if (fileInput) {
         fileInput.addEventListener('change', handleFileUpload);
     }
 
-    // Search input
+    // Search input with debouncing
     if (searchInput) {
-        searchInput.addEventListener('input', filterDocuments);
+        searchInput.addEventListener('input', debouncedFilter);
     }
 
     // Filter dropdowns
@@ -49,77 +70,154 @@ function setupEventListeners() {
     if (filterStatus) {
         filterStatus.addEventListener('change', filterDocuments);
     }
+
+    document.addEventListener("click", e => {
+        if (e.target.closest("tr")) return; // <-- ignore table clicks
+
+        const sidebar = document.getElementById("pdf-panel");
+        const isOpen = !sidebar.classList.contains("translate-x-full");
+
+        if (isOpen && !sidebar.contains(e.target)) {
+            closePdfSidebar();
+        }
+    });
+
+
 }
+
+function togglePdfPanel() {
+    const panel = document.getElementById("pdf-panel");
+    const isOpen = !panel.classList.contains("translate-x-full");
+
+    if (isOpen) {
+        closePdfSidebar();
+    } else {
+        panel.classList.remove("translate-x-full");
+
+        if (currentDocumentId) {
+            // Re-render current page if panel opens again
+            renderPage(currentPage);
+        }
+    }
+}
+
 
 // Fetch and display all documents
 async function loadDocuments() {
     try {
         console.log('Loading documents...');
-        const response = await fetch(`${API_BASE}/documents`);
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        allDocuments = await response.json();
+        allDocuments = await apiRequest(API_CONFIG.ENDPOINTS.DOCUMENTS);
         console.log('Documents loaded:', allDocuments);
-        filterDocuments();
+        await filterDocuments();
     } catch (error) {
         console.error('Error loading documents:', error);
-        if (documentsTbody) {
-            documentsTbody.innerHTML = `
-                <tr class="border-b border-border-light dark:border-border-dark">
-                    <td colspan="6" class="px-6 py-8 text-center text-red-500">
-                        Error loading documents: ${escapeHtml(error.message)}
-                        <br><span class="text-sm text-muted-light dark:text-muted-dark">Make sure the backend is running and accessible.</span>
-                    </td>
-                </tr>
-            `;
-        }
+        showDocumentLoadError(error.message);
+    }
+}
+
+/**
+ * Shows an error message in the documents table when loading fails.
+ * @param {string} errorMessage - The error message to display
+ */
+function showDocumentLoadError(errorMessage) {
+    if (documentsTbody) {
+        documentsTbody.innerHTML = `
+            <tr class="border-b border-border-light dark:border-border-dark">
+                <td colspan="6" class="px-6 py-8 text-center text-red-500">
+                    Error loading documents: ${escapeHtml(errorMessage)}
+                    <br><span class="text-sm text-muted-light dark:text-muted-dark">Make sure the backend is running and accessible.</span>
+                </td>
+            </tr>
+        `;
     }
 }
 
 // Filter documents based on search and filters
-function filterDocuments() {
-    if (!allDocuments || !documentsTbody) return;
+async function filterDocuments() {
+    if (!documentsTbody) return;
 
-    const searchTerm = searchInput?.value.toLowerCase() || '';
+    const searchTerm = searchInput?.value.trim() || '';
     const contentTypeFilter = filterContentType?.value || '';
     const sizeFilter = filterSize?.value || '';
     const statusFilter = filterStatus?.value || '';
+    const searchIndicator = document.getElementById('search-indicator');
 
-    const filtered = allDocuments.filter(doc => {
-        // Enhanced search filter - search across multiple fields including tags
-        const matchesSearch = !searchTerm ||
-            doc.title.toLowerCase().includes(searchTerm) ||
-            doc.originalFilename.toLowerCase().includes(searchTerm) ||
-            doc.contentType.toLowerCase().includes(searchTerm) ||
-            doc.status.toLowerCase().includes(searchTerm) ||
-            formatBytes(doc.sizeBytes).toLowerCase().includes(searchTerm) ||
-            (doc.id && doc.id.toLowerCase().includes(searchTerm)) ||
-            (doc.tags && doc.tags.some(tag => tag.toLowerCase().includes(searchTerm)));
+    let documentsToDisplay;
 
+    // If there's a search term, always rely on Elasticsearch (backend /search is fuzzy)
+    if (searchTerm) {
+        console.log('🔍 Searching with Elasticsearch (fuzzy backend):', searchTerm);
+
+        // Show search indicator
+        if (searchIndicator) {
+            searchIndicator.classList.remove('hidden');
+        }
+
+        try {
+            const searchResults = await apiRequest(
+                API_CONFIG.ENDPOINTS.SEARCH(searchTerm)
+            );
+
+            // Map search results to document metadata loaded from the API
+            documentsToDisplay = searchResults
+                .map(result => {
+                    const fullDoc = allDocuments.find(doc => doc.id === result.documentId);
+                    if (!fullDoc) {
+                        console.warn(`Document ${result.documentId} found in search but not in document list`);
+                    }
+                    return fullDoc;
+                })
+                .filter(doc => doc !== null && doc !== undefined);
+
+            console.log(`✅ Fuzzy search found ${searchResults.length} results, ${documentsToDisplay.length} matched to documents`);
+        } catch (error) {
+            console.error('❌ Fuzzy Elasticsearch search failed:', error);
+            showMessage('Search failed. Please try again.', TOAST_TYPES.ERROR);
+            documentsToDisplay = [];
+        } finally {
+            // Hide search indicator
+            if (searchIndicator) {
+                searchIndicator.classList.add('hidden');
+            }
+        }
+    } else {
+        // No search term, use all documents
+        documentsToDisplay = allDocuments;
+
+        // Hide search indicator
+        if (searchIndicator) {
+            searchIndicator.classList.add('hidden');
+        }
+    }
+
+    // Apply client-side filters (content type, size, status)
+    const filtered = documentsToDisplay.filter(doc => {
         // Content type filter
         const matchesContentType = !contentTypeFilter ||
             doc.contentType.startsWith(contentTypeFilter);
 
         // Size filter
-        let matchesSize = true;
-        if (sizeFilter === 'small') {
-            matchesSize = doc.sizeBytes < 1024 * 1024; // < 1MB
-        } else if (sizeFilter === 'medium') {
-            matchesSize = doc.sizeBytes >= 1024 * 1024 && doc.sizeBytes <= 10 * 1024 * 1024; // 1-10MB
-        } else if (sizeFilter === 'large') {
-            matchesSize = doc.sizeBytes > 10 * 1024 * 1024; // > 10MB
-        }
+        const matchesSize = matchesSizeFilter(doc.sizeBytes, sizeFilter);
 
         // Status filter
         const matchesStatus = !statusFilter || doc.status === statusFilter;
 
-        return matchesSearch && matchesContentType && matchesSize && matchesStatus;
+        return matchesContentType && matchesSize && matchesStatus;
     });
 
     displayDocuments(filtered);
+}
+
+function matchesSizeFilter(sizeBytes, filter) {
+    if (!filter) return true;
+    
+    const filterConfig = SIZE_FILTERS[filter.toUpperCase()];
+    if (!filterConfig) return true;
+    
+    const withinMin = !filterConfig.min || sizeBytes >= filterConfig.min;
+    const withinMax = !filterConfig.max || sizeBytes < filterConfig.max;
+    
+    return withinMin && withinMax;
 }
 
 // Display documents in the table
@@ -139,10 +237,11 @@ function displayDocuments(documents) {
         const statusClass = getStatusClass(doc.status);
         const isPdf = doc.contentType === 'application/pdf';
         const rowClass = isPdf ? 'cursor-pointer' : '';
-        const onClickAttr = isPdf ? `onclick="openPdfPreview('${doc.id}', '${escapeHtml(doc.title)}')"` : '';
-        
+        const onClickAttr = `onclick="openPdfPreview('${doc.id}', '${escapeHtml(doc.title)}')"`;
+        const isImage = doc.contentType.startsWith('image/');
+        console.log(doc.title + "-" + doc.contentType);
         // Format tags for display
-        const tagsHtml = doc.tags && doc.tags.length > 0 
+        const tagsHtml = doc.tags && doc.tags.length > 0
             ? `<div class="flex flex-wrap gap-1 mt-1">${doc.tags.map(tag => 
                 `<span class="px-2 py-0.5 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 rounded">${escapeHtml(tag)}</span>`
               ).join('')}</div>`
@@ -152,7 +251,9 @@ function displayDocuments(documents) {
             <tr class="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors ${rowClass}" ${onClickAttr}>
                 <td class="px-6 py-4">
                     <div class="font-medium text-foreground-light dark:text-foreground-dark flex items-center gap-2">
-                        ${isPdf ? '<span class="material-symbols-outlined text-red-500 text-sm">picture_as_pdf</span>' : ''}
+                        ${isPdf ? '<span class="material-symbols-outlined text-red-500 text-sm">picture_as_pdf</span>' :  isImage
+                        ? '<span class="material-symbols-outlined text-green-500 text-sm">image</span>'
+                        : ''}
                         ${escapeHtml(doc.title)}
                     </div>
                     <div class="text-xs text-muted-light dark:text-muted-dark">${escapeHtml(doc.originalFilename)}</div>
@@ -220,57 +321,97 @@ async function handleFileUpload() {
         return;
     }
 
-    // Get tags input if exists
-    const tagsInput = document.getElementById('tags-input');
-    let tags = [];
-    if (tagsInput && tagsInput.value.trim()) {
-        // Split by comma and trim each tag
-        tags = tagsInput.value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-    }
-
+    const tags = getTagsFromInput();
+    const successfulUploads = [];
+    
     // Upload each file
     for (const file of files) {
         try {
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('title', file.name);
+            // Validate file before upload
+            const validation = validateFile(file);
+            if (!validation.isValid) {
+                showMessage(`File "${file.name}": ${validation.error}`, TOAST_TYPES.ERROR);
+                continue;
+            }
+
+            await uploadSingleFile(file, tags);
+            successfulUploads.push(file.name);
             
-            // Append each tag as a separate form field
-            if (tags.length > 0) {
-                tags.forEach(tag => {
-                    formData.append('tags', tag);
-                });
-            }
-
-            console.log('Uploading document:', file.name, 'with tags:', tags);
-
-            const response = await fetch(`${API_BASE}/documents`, {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const result = await response.json();
-            console.log('Document uploaded:', result);
-
-            // Show success message
-            showMessage(`Document "${file.name}" uploaded successfully!`, 'success');
-
         } catch (error) {
             console.error('Error uploading document:', error);
-            showMessage(`Error uploading "${file.name}": ${error.message}`, 'danger');
+            showMessage(`Error uploading "${file.name}": ${error.message}`, TOAST_TYPES.ERROR);
         }
     }
 
-    // Clear the file input, tags input, and reload documents
+    // Clear inputs and reload documents if any uploads succeeded
+    if (successfulUploads.length > 0) {
+        clearUploadForm();
+        loadDocuments();
+        
+        if (successfulUploads.length === 1) {
+            showMessage(`Document "${successfulUploads[0]}" uploaded successfully!`, TOAST_TYPES.SUCCESS);
+        } else {
+            showMessage(`${successfulUploads.length} documents uploaded successfully!`, TOAST_TYPES.SUCCESS);
+        }
+    }
+}
+
+/**
+ * Extracts tags from the tags input field.
+ * @returns {string[]} Array of cleaned tag strings
+ */
+function getTagsFromInput() {
+    const tagsInput = document.getElementById('tags-input');
+    if (!tagsInput || !tagsInput.value.trim()) {
+        return [];
+    }
+    
+    return tagsInput.value
+        .split(',')
+        .map(tag => tag.trim())
+        .filter(tag => tag.length > 0);
+}
+
+/**
+ * Uploads a single file with the specified tags.
+ * @param {File} file - The file to upload
+ * @param {string[]} tags - Array of tags to associate with the file
+ */
+async function uploadSingleFile(file, tags) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('title', file.name);
+    
+    // Append each tag as a separate form field
+    tags.forEach(tag => {
+        formData.append('tags', tag);
+    });
+
+    console.log('Uploading document:', file.name, 'with tags:', tags);
+
+    const response = await fetch(API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.DOCUMENTS, {
+        method: 'POST',
+        body: formData
+    });
+
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    console.log('Document uploaded:', result);
+    return result;
+}
+
+/**
+ * Clears the upload form inputs.
+ */
+function clearUploadForm() {
     fileInput.value = '';
+    const tagsInput = document.getElementById('tags-input');
     if (tagsInput) {
         tagsInput.value = '';
     }
-    loadDocuments();
 }
 
 // Delete a document
@@ -280,76 +421,21 @@ async function deleteDocument(documentId) {
     }
     
     try {
-        const response = await fetch(`${API_BASE}/documents/${documentId}`, {
+        await apiRequest(API_CONFIG.ENDPOINTS.DOCUMENT_BY_ID(documentId), {
             method: 'DELETE'
         });
         
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
         console.log('Document deleted:', documentId);
         loadDocuments();
-        showMessage('Document deleted successfully!', 'success');
+        showMessage('Document deleted successfully!', TOAST_TYPES.SUCCESS);
         
     } catch (error) {
         console.error('Error deleting document:', error);
-        showMessage(`Error deleting document: ${error.message}`, 'danger');
+        showMessage(`Error deleting document: ${error.message}`, TOAST_TYPES.ERROR);
     }
 }
 
-// Utility functions
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-function formatBytes(bytes, decimals = 2) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const dm = decimals < 0 ? 0 : decimals;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-}
-
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diff = now - date;
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-
-    if (days === 0) {
-        return 'Today';
-    } else if (days === 1) {
-        return 'Yesterday';
-    } else if (days < 7) {
-        return `${days} days ago`;
-    } else {
-        return date.toLocaleDateString();
-    }
-}
-
-function showMessage(message, type) {
-    // Create a notification toast
-    const toast = document.createElement('div');
-    const bgColor = type === 'success' ? 'bg-green-500' : type === 'danger' ? 'bg-red-500' : 'bg-blue-500';
-    toast.className = `fixed top-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-opacity duration-300`;
-    toast.textContent = message;
-
-    document.body.appendChild(toast);
-
-    // Auto-remove after 3 seconds
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        setTimeout(() => {
-            if (toast.parentNode) {
-                toast.remove();
-            }
-        }, 300);
-    }, 3000);
-}
+// Utility functions are now imported from utils.js
 
 // PDF Preview functionality
 let currentDocumentId = null;
@@ -357,29 +443,47 @@ let currentPage = 1;
 let totalPages = 0;
 
 async function openPdfPreview(documentId, title) {
-    const modal = document.getElementById('pdf-modal');
-    const modalTitle = document.getElementById('pdf-modal-title');
+    document.getElementById('pdf-summary').textContent = ""; //implement proper clean up function next
+    const panel = document.getElementById("pdf-panel");
+    panel.classList.remove("translate-x-full"); // <-- opens the tab panel
+
+    const titleEl = document.getElementById('pdf-sidebar-title');
     const image = document.getElementById('pdf-image');
     const loading = document.getElementById('pdf-loading');
     const error = document.getElementById('pdf-error');
 
-    // Show modal
-    modal.classList.remove('hidden');
-    modalTitle.textContent = title;
+    titleEl.textContent = title;
 
     // Hide image and error, show loading
     image.style.display = 'none';
     loading.style.display = 'block';
     error.classList.add('hidden');
 
+    const doc = allDocuments.find(doc => doc.id === documentId);
+
+    if (doc?.contentType.startsWith('image/')) {
+        const panel = document.getElementById("pdf-panel");
+        panel.classList.remove("translate-x-full");
+
+        document.getElementById('pdf-sidebar-title').textContent = title;
+
+        const image = document.getElementById('pdf-image');
+        image.src = API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.DOCUMENT_PAGES(documentId, 1, 1.5);
+        image.style.display = 'block';
+
+        document.getElementById('pdf-loading').style.display = 'none';
+        document.getElementById('prev-page').disabled = true;
+        document.getElementById('next-page').disabled = true;
+        document.getElementById('page-count').textContent = '1';
+        document.getElementById('page-num').textContent = '1';
+        document.getElementById('pdf-summary').textContent = doc.summary || 'Summary not available';
+
+        return;
+    }
+
     try {
         // Fetch page count from backend
-        const countResponse = await fetch(`${API_BASE}/documents/${documentId}/pages/count`);
-        if (!countResponse.ok) {
-            throw new Error(`Failed to load PDF: ${countResponse.status}`);
-        }
-
-        totalPages = await countResponse.json();
+        totalPages = await apiRequest(API_CONFIG.ENDPOINTS.DOCUMENT_PAGE_COUNT(documentId));
         currentDocumentId = documentId;
         currentPage = 1;
 
@@ -389,6 +493,9 @@ async function openPdfPreview(documentId, title) {
 
         // Render first page
         await renderPage(currentPage);
+
+        const doc = allDocuments.find(doc => doc.id === documentId);
+        document.getElementById('pdf-summary').textContent = doc.summary;
 
         // Hide loading, show image
         loading.style.display = 'none';
@@ -414,7 +521,7 @@ async function renderPage(pageNum) {
         image.style.display = 'none';
 
         // Fetch rendered page from backend
-        const response = await fetch(`${API_BASE}/documents/${currentDocumentId}/pages/${pageNum}?scale=1.5`);
+        const response = await fetch(API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.DOCUMENT_PAGES(currentDocumentId, pageNum, 1.5));
         if (!response.ok) {
             throw new Error(`Failed to render page: ${response.status}`);
         }
@@ -444,15 +551,15 @@ async function renderPage(pageNum) {
     }
 }
 
-function closePdfModal() {
-    const modal = document.getElementById('pdf-modal');
-    modal.classList.add('hidden');
+function closePdfSidebar() {
+    document.getElementById("pdf-panel").classList.add("translate-x-full");
 
+    document.getElementById("pdf-panel").style.width = ""; //reset width
     // Clean up
     const image = document.getElementById('pdf-image');
     if (image.src) {
         URL.revokeObjectURL(image.src);
-        image.src = '';
+        image.src = ''; //clean up
     }
     currentDocumentId = null;
     currentPage = 1;
@@ -471,13 +578,22 @@ function nextPage() {
     renderPage(currentPage);
 }
 
+// Make functions globally available for inline onclick handlers
+window.togglePdfPanel = togglePdfPanel;
+window.editDocument = editDocument;
+window.deleteDocument = deleteDocument;
+window.openPdfPreview = openPdfPreview;
+window.closePdfSidebar = closePdfSidebar;
+window.previousPage = previousPage;
+window.nextPage = nextPage;
+
 // Close modal when clicking outside
 document.addEventListener('DOMContentLoaded', function() {
     const modal = document.getElementById('pdf-modal');
     if (modal) {
         modal.addEventListener('click', function(e) {
             if (e.target === modal) {
-                closePdfModal();
+                closePdfSidebar();
             }
         });
     }

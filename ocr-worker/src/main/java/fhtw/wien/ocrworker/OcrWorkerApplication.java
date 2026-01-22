@@ -11,8 +11,8 @@ public class OcrWorkerApplication {
     private static final Logger log = LoggerFactory.getLogger(OcrWorkerApplication.class);
 
     public static void main(String[] args) {
-        log.info("🚀 Starting OCR Worker Application...");
+        log.info("Starting OCR Worker application");
         SpringApplication.run(OcrWorkerApplication.class, args);
-        log.info("✅ OCR Worker Application started successfully");
+        log.info("OCR Worker application started");
     }
 }

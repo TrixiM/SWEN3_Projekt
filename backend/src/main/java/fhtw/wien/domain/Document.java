@@ -47,18 +47,17 @@ public class Document {
     @Column(name = "checksum_sha256", length = 64)
     private String checksumSha256;
 
-    @Lob
-    @Column(name = "pdf_data")
-    private byte[] pdfData;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
     private DocumentStatus status = DocumentStatus.NEW;
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "document_tags", joinColumns = @JoinColumn(name = "document_id"))
     @Column(name = "tag")
     private List<String> tags = new ArrayList<>();
+
+    @Column(name = "summary", columnDefinition = "text")
+    private String summary;
 
     @Version
     @Column(nullable = false)
@@ -72,24 +71,17 @@ public class Document {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+
     public Document(
             String title,
             String originalFilename,
             String contentType,
-            long sizeBytes,
-            String bucket,
-            String objectKey,
-            String storageUri,
-            String checksumSha256
+            long sizeBytes
     ) {
         this.title = title;
         this.originalFilename = originalFilename;
         this.contentType = contentType;
         this.sizeBytes = sizeBytes;
-        this.bucket = bucket;
-        this.objectKey = objectKey;
-        this.storageUri = storageUri;
-        this.checksumSha256 = checksumSha256;
         this.status = DocumentStatus.NEW;
         this.tags = new ArrayList<>();
     }

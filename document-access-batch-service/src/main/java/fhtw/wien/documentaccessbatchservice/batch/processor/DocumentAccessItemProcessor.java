@@ -1,0 +1,51 @@
+package fhtw.wien.documentaccessbatchservice.batch.processor;
+
+
+import fhtw.wien.documentaccessbatchservice.dto.DocumentAccessStatDto;
+import fhtw.wien.documentaccessbatchservice.xmlModel.DocumentAccessXml;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.batch.core.ExitStatus;
+import org.springframework.batch.core.StepExecution;
+import org.springframework.batch.core.StepExecutionListener;
+import org.springframework.batch.core.annotation.BeforeStep;
+import org.springframework.batch.core.annotation.AfterStep;
+import org.springframework.batch.item.ItemProcessor;
+import org.springframework.stereotype.Component;
+
+import java.time.LocalDate;
+
+@Component
+public class DocumentAccessItemProcessor //ItemProcessor<InputFormat, OutputFormat>
+        implements ItemProcessor<DocumentAccessXml, DocumentAccessStatDto>, StepExecutionListener {
+
+    private static final Logger log =
+            LoggerFactory.getLogger(DocumentAccessItemProcessor.class);
+
+    //private LocalDate date = LocalDate.of(2026,1,29); //for testing purposes
+
+    public DocumentAccessItemProcessor() {
+    }
+
+    @Override
+    public DocumentAccessStatDto process(DocumentAccessXml item) { //for every item <document> in chunk
+        log.debug("Processing document {} with accessCount {} from {}",
+                item.getDocumentId(), item.getAccessCount(), LocalDate.now());
+        return new DocumentAccessStatDto(
+                item.getDocumentId(),
+                LocalDate.now(),
+                item.getAccessCount()
+        );
+    }
+
+    @AfterStep //run once all chunks have been read, processed and written
+    public ExitStatus afterStep(StepExecution stepExecution) {
+        log.info("Step {} completed: read={}, written={}, skipped={}",
+                stepExecution.getStepName(),
+                stepExecution.getReadCount(),
+                stepExecution.getWriteCount(),
+                stepExecution.getSkipCount());
+        return stepExecution.getExitStatus();
+    }
+
+}

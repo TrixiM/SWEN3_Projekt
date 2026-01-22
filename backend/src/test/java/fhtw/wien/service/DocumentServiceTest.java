@@ -5,8 +5,10 @@ import fhtw.wien.business.PdfRenderingBusinessLogic;
 import fhtw.wien.domain.Document;
 import fhtw.wien.exception.NotFoundException;
 import fhtw.wien.messaging.DocumentMessageProducer;
+import fhtw.wien.repo.DocumentAccessStatRepo;
 import fhtw.wien.repo.DocumentRepo;
 import fhtw.wien.service.DocumentService;
+import fhtw.wien.service.MinIOStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
@@ -20,6 +22,8 @@ import static org.mockito.Mockito.*;
 class DocumentServiceTest {
 
     private DocumentRepo repo;
+    private DocumentAccessStatRepo accessStatRepo;
+    private MinIOStorageService minioStorageService;
     private DocumentBusinessLogic documentBusinessLogic;
     private PdfRenderingBusinessLogic pdfRenderingBusinessLogic;
     private DocumentMessageProducer messageProducer;
@@ -28,7 +32,9 @@ class DocumentServiceTest {
     @BeforeEach
     void setUp() {
         repo = mock(DocumentRepo.class);
-        documentBusinessLogic = new DocumentBusinessLogic(repo);
+        accessStatRepo = mock(DocumentAccessStatRepo.class);
+        minioStorageService = mock(MinIOStorageService.class);
+        documentBusinessLogic = new DocumentBusinessLogic(repo, accessStatRepo, minioStorageService);
         pdfRenderingBusinessLogic = mock(PdfRenderingBusinessLogic.class);
         messageProducer = mock(DocumentMessageProducer.class);
         service = new DocumentService(documentBusinessLogic, pdfRenderingBusinessLogic, messageProducer);
@@ -46,14 +52,19 @@ class DocumentServiceTest {
 //    }
 
     @Test
-    void create_shouldSaveDocument() {
+    void create_shouldSaveDocument() throws Exception {
         Document doc = new Document(
-                "Test Title", "file.txt", "text/plain", 123L,
-                "test-bucket", "object-key", "s3://test-bucket/object-key", "abc123"
+                "Test Title", "file.txt", "text/plain", 123L
         );
+        doc.setBucket("test-bucket");
+        doc.setObjectKey("object-key");
+        doc.setStorageUri("s3://test-bucket/object-key");
+        doc.setChecksumSha256("abc123");
+        byte[] pdfData = new byte[]{0x25, 0x50, 0x44, 0x46}; // Mock PDF data
         when(repo.save(doc)).thenReturn(doc);
+        when(minioStorageService.uploadDocument(any(), any(), any(), any(), anyLong())).thenReturn("object-key");
 
-        Document result = service.create(doc);
+        Document result = service.create(doc, new java.io.ByteArrayInputStream(pdfData));
 
         assertEquals(doc, result);
         verify(repo).save(doc);
@@ -63,9 +74,12 @@ class DocumentServiceTest {
     void get_shouldReturnDocument() {
         UUID id = UUID.randomUUID();
         Document doc = new Document(
-                "Test Title", "file.txt", "text/plain", 123L,
-                "test-bucket", "object-key", "s3://test-bucket/object-key", "abc123"
+                "Test Title", "file.txt", "text/plain", 123L
         );
+        doc.setBucket("test-bucket");
+        doc.setObjectKey("object-key");
+        doc.setStorageUri("s3://test-bucket/object-key");
+        doc.setChecksumSha256("abc123");
         // Set the ID if your Document class allows it, or use a constructor that sets it
         // e.g., doc.setId(id);
         when(repo.findById(id)).thenReturn(Optional.of(doc));

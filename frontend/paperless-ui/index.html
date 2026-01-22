@@ -8,7 +8,7 @@
   <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
-  <script src="js/main.js" defer></script>
+  <script src="js/main.js" type="module" defer></script>
   <script>
     tailwind.config = {
       darkMode: "class",
@@ -62,10 +62,6 @@
           <h1 class="text-xl font-bold">Document Management System</h1>
         </div>
         <div class="flex items-center gap-4">
-          <div class="relative hidden sm:block">
-            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-muted-light dark:text-muted-dark">search</span>
-            <input class="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-full py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary w-48 lg:w-64 transition-all" placeholder="Search" type="text"/>
-          </div>
           <button class="p-2 rounded-full hover:bg-background-light dark:hover:bg-background-dark transition-colors">
             <span class="material-symbols-outlined text-muted-light dark:text-muted-dark">notifications</span>
           </button>
@@ -79,7 +75,8 @@
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div class="relative flex-grow">
             <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-muted-light dark:text-muted-dark">search</span>
-            <input id="search-input" class="w-full bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg py-3 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all" placeholder="Search documents..." type="text"/>
+            <input id="search-input" class="w-full bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg py-3 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all" placeholder="Search documents and content..." type="text"/>
+            <span id="search-indicator" class="hidden absolute right-4 top-1/2 -translate-y-1/2 text-xs px-2 py-1 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 rounded-full font-medium">Searching OCR text</span>
           </div>
           <div class="flex items-center gap-2 flex-wrap">
             <select id="filter-content-type" class="px-4 py-2 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors text-sm font-medium text-muted-light dark:text-muted-dark focus:outline-none focus:ring-2 focus:ring-primary">
@@ -155,34 +152,84 @@ cloud_upload
     </div>
   </main>
 
-  <!-- PDF Preview Modal -->
-  <div id="pdf-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
-    <div class="bg-surface-light dark:bg-surface-dark rounded-lg w-full max-w-6xl h-5/6 flex flex-col">
-      <div class="flex items-center justify-between p-4 border-b border-border-light dark:border-border-dark">
-        <h2 id="pdf-modal-title" class="text-xl font-semibold text-foreground-light dark:text-foreground-dark"></h2>
-        <button onclick="closePdfModal()" class="p-2 hover:bg-background-light dark:hover:bg-background-dark rounded-lg transition-colors">
-          <span class="material-symbols-outlined">close</span>
-        </button>
+
+  <!-- PDF Right Panel -->
+  <div id="pdf-panel"
+       class="fixed top-0 right-0 h-full w-[480px] min-w-[320px] max-w-[80vw] max-w-full bg-surface-light dark:bg-surface-dark
+            border-l border-border-light dark:border-border-dark shadow-xl
+            transform translate-x-full transition-transform duration-300 z-50 flex flex-col">
+
+    <!-- Resize Handle -->
+    <div id="pdf-resizer"
+         class="absolute left-0 top-0 h-full w-2 cursor-ew-resize
+            bg-transparent hover:bg-primary/30"></div>
+
+    <!-- Header -->
+    <div class="flex items-center justify-between p-3 border-b border-border-light dark:border-border-dark">
+      <h2 id="pdf-sidebar-title" class="text-lg font-semibold"></h2>
+      <button onclick="closePdfSidebar()" class="p-2 hover:bg-background-light dark:hover:bg-background-dark rounded-lg">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <!-- Content -->
+    <div class="flex-grow p-4 space-y-6 overflow-y-auto">
+
+      <img id="pdf-image" class="mx-auto border border-border-light dark:border-border-dark"
+           style="display:none" alt="PDF page">
+
+      <div id="pdf-loading" class="text-center py-8 text-muted-light dark:text-muted-dark">
+        Loading PDF...
       </div>
-      <div class="flex-grow overflow-auto p-4">
-        <img id="pdf-image" class="mx-auto border border-border-light dark:border-border-dark" style="display: none;" alt="PDF page"/>
-        <div id="pdf-loading" class="text-center py-8 text-muted-light dark:text-muted-dark">
-          Loading PDF...
-        </div>
-        <div id="pdf-error" class="hidden text-center py-8 text-red-500"></div>
-      </div>
-      <div class="flex items-center justify-center gap-4 p-4 border-t border-border-light dark:border-border-dark">
-        <button onclick="previousPage()" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" id="prev-page">
-          Previous
-        </button>
-        <span class="text-muted-light dark:text-muted-dark">
-          Page <span id="page-num">1</span> / <span id="page-count">1</span>
-        </span>
-        <button onclick="nextPage()" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" id="next-page">
-          Next
-        </button>
+
+      <div id="pdf-error" class="hidden text-center py-8 text-red-500"></div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="flex items-center justify-center gap-4 p-4 border-t border-border-light dark:border-border-dark">
+      <button onclick="previousPage()" id="prev-page"
+              class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50">
+        Previous
+      </button>
+
+      <span class="text-muted-light dark:text-muted-dark">
+        Page <span id="page-num">1</span> / <span id="page-count">1</span>
+      </span>
+
+      <button onclick="nextPage()" id="next-page"
+              class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50">
+        Next
+      </button>
+    </div>
+
+    <!--Summary Section-->
+    <div class="mx-4 mb-4 p-4 rounded-lg
+            bg-background-light dark:bg-background-dark
+            border border-border-light dark:border-border-dark
+            shadow-sm">
+
+      <h3 class="text-sm font-semibold mb-2 text-foreground-light dark:text-foreground-dark">
+        Document Summary
+      </h3>
+
+      <div id="pdf-summary"
+           class="text-sm leading-relaxed
+              text-muted-light dark:text-muted-dark
+              max-h-48 overflow-y-auto pr-2">
+        No summary available.
       </div>
     </div>
+
+</div>
+  <!-- Right Side Tab -->
+  <div id="pdf-sidetab"
+       onclick="togglePdfPanel()"
+       class="fixed top-1/2 right-0 transform -translate-y-1/2 translate-x-0
+            bg-primary text-white px-4 py-3 rounded-l-lg cursor-pointer shadow-lg
+            hover:bg-primary/90 z-40 select-none">
+    Preview
   </div>
+
+
 </div>
 </body></html>

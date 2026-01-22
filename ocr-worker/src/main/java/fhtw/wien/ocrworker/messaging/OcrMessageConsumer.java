@@ -1,12 +1,18 @@
 package fhtw.wien.ocrworker.messaging;
 
 import fhtw.wien.ocrworker.config.RabbitMQConfig;
-import fhtw.wien.ocrworker.dto.DocumentResponse;
+import fhtw.wien.ocrworker.dto.Document;
+import fhtw.wien.ocrworker.dto.OcrResultDto;
+import fhtw.wien.ocrworker.elasticsearch.ElasticsearchService;
+import fhtw.wien.ocrworker.service.IdempotencyService;
+import fhtw.wien.ocrworker.service.UnifiedOcrService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
+
+import java.util.UUID;
 
 @Component
 public class OcrMessageConsumer {
@@ -14,57 +20,75 @@ public class OcrMessageConsumer {
     private static final Logger log = LoggerFactory.getLogger(OcrMessageConsumer.class);
 
     private final RabbitTemplate rabbitTemplate;
+    private final UnifiedOcrService ocrProcessingService;
+    private final IdempotencyService idempotencyService;
+    private final ElasticsearchService elasticsearchService;
 
-    public OcrMessageConsumer(RabbitTemplate rabbitTemplate) {
+    public OcrMessageConsumer(RabbitTemplate rabbitTemplate,
+                              UnifiedOcrService ocrProcessingService,
+                              IdempotencyService idempotencyService,
+                              ElasticsearchService elasticsearchService) {
         this.rabbitTemplate = rabbitTemplate;
+        this.ocrProcessingService = ocrProcessingService;
+        this.idempotencyService = idempotencyService;
+        this.elasticsearchService = elasticsearchService;
     }
 
-    @RabbitListener(queues = RabbitMQConfig.DOCUMENT_CREATED_QUEUE)
-    public void handleDocumentCreated(DocumentResponse document) {
-        log.info("📄 OCR WORKER RECEIVED: Document created - ID: {}, Title: '{}'",
-                document.id(), document.title());
-        
-        log.info("📋 Document Details:");
-        log.info("   - Filename: {}", document.originalFilename());
-        log.info("   - Content Type: {}", document.contentType());
-        log.info("   - Size: {} bytes", document.sizeBytes());
-        log.info("   - Status: {}", document.status());
-        
-        // This is an "empty" OCR worker - it just processes/logs the message
-        // In a real implementation, this would:
-        // 1. Download the PDF from storage
-        // 2. Run OCR on it (e.g., using Tesseract)
-        // 3. Extract text
-        // 4. Update the document status
-        // 5. Store the extracted text
-        
-        log.info("🔄 Simulating OCR processing...");
-        
+    @RabbitListener(queues = RabbitMQConfig.DOCUMENT_CREATED_QUEUE) //listens to queue
+    public void handleDocumentCreated(Document document) {
+        log.info("OCR started: id={}, file='{}'", document.id(), document.originalFilename());
+
+        String messageId = "ocr-doc-" + document.id();
+        //idempotency processing
+        if (!idempotencyService.tryMarkAsProcessed(messageId)) {
+            log.info("Skipping duplicate message for {}", document.id());
+            return;
+        }
+        //ocr processing
+        OcrResultDto ocrResult = ocrProcessingService.processDocument(document);
+        log.info("OCR done: id={}, chars={}, status={}", document.id(), ocrResult.totalCharacters(), ocrResult.status());
+
+        //elasticsearch indexing
+        if (ocrResult.isSuccess() && ocrResult.extractedText() != null && !ocrResult.extractedText().isEmpty()) {
+            try {
+                elasticsearchService.indexDocument(ocrResult);
+            } catch (Exception e) {
+                log.error("Elasticsearch indexing failed for {}", document.id(), e);
+            }
+        }
+
+        sendOcrCompletionMessage(ocrResult);
+    }
+
+    @RabbitListener(queues = RabbitMQConfig.DOCUMENT_DELETED_QUEUE)
+    public void handleDocumentDeleted(UUID id) {
+        log.info("Received document deletion event: id={}", id);
+
+        String messageId = "delete-doc-" + id;
+        if (!idempotencyService.tryMarkAsProcessed(messageId)) {
+            log.info("Skipping duplicate delete message for {}", id);
+            return;
+        }
+
         try {
-            // Simulate some processing time
-            Thread.sleep(1000);
-            
-            log.info("✅ OCR processing completed successfully for document: {}", document.id());
-            
-            // Send acknowledgment message back
-            String ackMessage = String.format(
-                    "✅ OCR Worker: Document '%s' (ID: %s) processed successfully",
-                    document.title(), document.id()
-            );
-            
+            elasticsearchService.deleteDocument(id);
+            log.info("Deleted document {} from Elasticsearch", id);
+        } catch (Exception e) {
+            log.error("Failed to delete document {} from Elasticsearch", id, e);
+        }
+    }
+
+    //Converts DTO to JSON and sends to a topic exchange, any service subscribed to that routing key receives it
+    private void sendOcrCompletionMessage(OcrResultDto ocrResult) { //just publishes event, nothing sent to a queue
+        try {
             rabbitTemplate.convertAndSend(
                     RabbitMQConfig.DOCUMENT_EXCHANGE,
-                    "document.created.ack",
-                    ackMessage
+                    RabbitMQConfig.OCR_COMPLETED_ROUTING_KEY,
+                    ocrResult
             );
-            
-            log.info("📤 Sent acknowledgment to queue");
-            
-        } catch (InterruptedException e) {
-            log.error("❌ OCR processing interrupted for document: {}", document.id(), e);
-            Thread.currentThread().interrupt();
+            log.info("Sent OCR result to GenAI: id={}, status={}", ocrResult.documentId(), ocrResult.status());
         } catch (Exception e) {
-            log.error("❌ Error processing document: {}", document.id(), e);
+            log.error("Failed to send OCR result for {}", ocrResult.documentId(), e);
         }
     }
 }

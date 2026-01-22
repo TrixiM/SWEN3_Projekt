@@ -1,8 +1,10 @@
 package fhtw.wien.messaging;
 
-import fhtw.wien.config.RabbitMQConfig;
-import fhtw.wien.dto.DocumentResponse;
+import static fhtw.wien.config.MessagingConstants.*;
+
+import fhtw.wien.domain.Document;
 import fhtw.wien.exception.MessagingException;
+import fhtw.wien.service.DocumentMessageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -11,7 +13,7 @@ import org.springframework.stereotype.Component;
 import java.util.UUID;
 
 @Component
-public class DocumentMessageProducer {
+public class DocumentMessageProducer implements DocumentMessageService {
 
     private static final Logger log = LoggerFactory.getLogger(DocumentMessageProducer.class);
 
@@ -21,33 +23,35 @@ public class DocumentMessageProducer {
         this.rabbitTemplate = rabbitTemplate;
     }
 
-    public void publishDocumentCreated(DocumentResponse document) {
-        log.info("Publishing document created event for document ID: {}", document.id());
+    @Override
+    public void publishDocumentCreated(Document document) {
+        log.info("Publishing document created event for document ID: {}", document.getId());
         try {
             rabbitTemplate.convertAndSend(
-                    RabbitMQConfig.DOCUMENT_EXCHANGE,
-                    RabbitMQConfig.DOCUMENT_CREATED_ROUTING_KEY,
+                    DOCUMENT_EXCHANGE,
+                    DOCUMENT_CREATED_ROUTING_KEY,
                     document
             );
-            log.debug("Successfully published document created event for ID: {}", document.id());
+            log.debug("Successfully published document created event for ID: {}", document.getId());
         } catch (Exception e) {
-            log.error("Failed to publish document created event for ID: {}", document.id(), e);
+            log.error("Failed to publish document created event for ID: {}", document.getId(), e);
             throw new MessagingException("Failed to publish document created event", e);
         }
     }
-
-    public void publishDocumentDeleted(UUID documentId) {
-        log.info("Publishing document deleted event for document ID: {}", documentId);
-        try {
+    @Override
+    public void deleteDocument(UUID id) {
+        log.info("Deleting elasticsearch index of document with ID: {}", id);
+        try{
             rabbitTemplate.convertAndSend(
-                    RabbitMQConfig.DOCUMENT_EXCHANGE,
-                    RabbitMQConfig.DOCUMENT_DELETED_ROUTING_KEY,
-                    documentId.toString()
+                    DOCUMENT_EXCHANGE,
+                    DOCUMENT_DELETED_ROUTING_KEY,
+                    id
             );
-            log.debug("Successfully published document deleted event for ID: {}", documentId);
-        } catch (Exception e) {
-            log.error("Failed to publish document deleted event for ID: {}", documentId, e);
-            throw new MessagingException("Failed to publish document deleted event", e);
+            log.debug("Successfully deleted elasticsearch index of document with ID: {}", id);
+
+        }catch (Exception e){
+            log.error("Failed to delete elasticsearch index of document with ID: {}", id, e);
+            throw new MessagingException("Failed to delete elasticsearch index", e);
         }
     }
 }

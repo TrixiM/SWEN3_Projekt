@@ -1,6 +1,11 @@
-const API_BASE = '/api';
+import { 
+    API_CONFIG, 
+    TOAST_TYPES, 
+    showMessage, 
+    apiRequest 
+} from './utils.js';
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async() => {
     const stored = localStorage.getItem("selectedDocument");
     if (!stored) return;
 
@@ -18,9 +23,46 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("updated").value = new Date(doc.updatedAt).toLocaleString();
         document.getElementById("checksum").value = doc.checksum || "—";
         document.getElementById("summary").value = doc.summary || "No summary available.";
+
+
     }
 
     fillFields();
+    if (doc.id) {
+        await loadAccessStatistics(doc.id);
+    }
+
+    // Auto-refresh document data to check for summary updates
+    let refreshInterval;
+    async function refreshDocumentData() {
+        try {
+            const updated = await apiRequest(API_CONFIG.ENDPOINTS.DOCUMENT_BY_ID(doc.id));
+            
+            // Only update if summary has changed and we're not in edit mode
+            if (updated.summary && updated.summary !== doc.summary) {
+                const summaryField = document.getElementById("summary");
+                if (summaryField && summaryField.readOnly) {
+                    doc.summary = updated.summary;
+                    summaryField.value = updated.summary;
+                    console.log('✅ Summary updated:', updated.summary.substring(0, 100) + '...');
+                    
+                    // Stop refreshing once we have a summary
+                    if (refreshInterval) {
+                        clearInterval(refreshInterval);
+                        refreshInterval = null;
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Failed to refresh document data:', error);
+        }
+    }
+    
+    // Only auto-refresh if no summary exists yet
+    if (!doc.summary || doc.summary === "No summary available.") {
+        refreshInterval = setInterval(refreshDocumentData, 5000); // Check every 5 seconds
+        console.log('🔄 Auto-refresh enabled - checking for summary updates...');
+    }
 
     // Make fields read-only initially
     fields.forEach(id => {
@@ -52,6 +94,48 @@ document.addEventListener("DOMContentLoaded", () => {
     const saveBtn = document.getElementById("save");
     const home = document.getElementById("home");
 
+    async function loadAccessStatistics(documentId) {
+        const tableBody = document.getElementById("access-stats-table");
+        const emptyState = document.getElementById("access-stats-empty");
+
+        try {
+            const stats = await apiRequest(
+                API_CONFIG.ENDPOINTS.ACCESS_STATS_BY_DOC_ID(documentId)
+            );
+
+            tableBody.innerHTML = "";
+
+            if (!stats || stats.length === 0) {
+                emptyState.classList.remove("hidden");
+                return;
+            }
+
+            emptyState.classList.add("hidden");
+
+            stats.forEach(stat => {
+                const row = document.createElement("tr");
+
+                row.innerHTML = `
+                <td class="px-4 py-3 text-sm">
+                    ${new Date(stat.date).toLocaleDateString()}
+                </td>
+                <td class="px-4 py-3 text-sm font-medium">
+                    ${stat.accessCount}
+                </td>
+            `;
+
+                tableBody.appendChild(row);
+            });
+
+        } catch (error) {
+            console.error("Failed to load access statistics:", error);
+            showMessage(
+                "Could not load document access statistics",
+                TOAST_TYPES.ERROR
+            );
+        }
+    }
+
     // Delete a document
     async function deleteDocument(documentId) {
         if (!confirm('Are you sure you want to delete this document?')) {
@@ -59,40 +143,18 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         try {
-            const response = await fetch(`${API_BASE}/documents/${documentId}`, {
+            await apiRequest(API_CONFIG.ENDPOINTS.DOCUMENT_BY_ID(documentId), {
                 method: 'DELETE'
             });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
 
             console.log('Document deleted:', documentId);
 
         } catch (error) {
             console.error('Error deleting document:', error);
-            showMessage(`Error deleting document: ${error.message}`, 'danger');
+            showMessage(`Error deleting document: ${error.message}`, TOAST_TYPES.ERROR);
         }
     }
-    function showMessage(message, type) {
-        // Create a notification toast
-        const toast = document.createElement('div');
-        const bgColor = type === 'success' ? 'bg-green-500' : type === 'danger' ? 'bg-red-500' : 'bg-blue-500';
-        toast.className = `fixed top-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-opacity duration-300`;
-        toast.textContent = message;
-
-        document.body.appendChild(toast);
-
-        // Auto-remove after 3 seconds
-        setTimeout(() => {
-            toast.style.opacity = '0';
-            setTimeout(() => {
-                if (toast.parentNode) {
-                    toast.remove();
-                }
-            }, 300);
-        }, 3000);
-    }
+    // showMessage function now imported from utils.js
 
 
     deleteBtn.addEventListener("click", () => {
@@ -119,7 +181,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Prevent duplicates
         if (doc.tags.includes(trimmedTag)) {
-            showMessage(`Tag "${trimmedTag}" already exists.`, 'info');
+            showMessage(`Tag "${trimmedTag}" already exists.`, TOAST_TYPES.INFO);
             return;
         }
         
@@ -160,20 +222,20 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const updated = await updateDocument(doc.id, updatedDoc);
             doc.tags = updated.tags || doc.tags; // Update from server response
-            showMessage(`Tag "${trimmedTag}" added successfully!`, 'success');
+            showMessage(`Tag "${trimmedTag}" added successfully!`, TOAST_TYPES.SUCCESS);
         } catch (err) {
             console.error("Failed to add tag:", err);
             // Rollback on failure
             doc.tags = doc.tags.filter(t => t !== trimmedTag);
             tagEl.remove();
-            showMessage(`Error adding tag: ${err.message}`, 'danger');
+            showMessage(`Error adding tag: ${err.message}`, TOAST_TYPES.ERROR);
         }
     })
 
     removeTagBtn.addEventListener("click", async () => {
         const getSelectedTag = document.querySelectorAll(".selected");
         if (getSelectedTag.length === 0) {
-            showMessage('Please select tags to remove by clicking on them', 'info');
+            showMessage('Please select tags to remove by clicking on them', TOAST_TYPES.INFO);
             return;
         }
 
@@ -208,7 +270,7 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const updated = await updateDocument(doc.id, updatedDoc);
             doc.tags = updated.tags || doc.tags; // Update from server response
-            showMessage(`Tag(s) removed successfully!`, 'success');
+            showMessage(`Tag(s) removed successfully!`, TOAST_TYPES.SUCCESS);
         } catch (err) {
             console.error("Failed to remove tags:", err);
             // Rollback on failure
@@ -216,7 +278,7 @@ document.addEventListener("DOMContentLoaded", () => {
             // Re-add elements to DOM
             const tagsContainer = document.querySelector("#tags-container");
             elementsToRemove.forEach(el => tagsContainer.appendChild(el));
-            showMessage(`Error removing tags: ${err.message}`, 'danger');
+            showMessage(`Error removing tags: ${err.message}`, TOAST_TYPES.ERROR);
         }
     })
 
@@ -228,7 +290,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Update a doc
     async function updateDocument(documentId, updatedData) {
         try {
-            const response = await fetch(`${API_BASE}/documents/${documentId}`, {
+            const updated = await apiRequest(API_CONFIG.ENDPOINTS.DOCUMENT_BY_ID(documentId), {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'
@@ -236,17 +298,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify(updatedData)
             });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const updated = await response.json();
             console.log('Document updated:', updated);
             return updated;
 
         } catch (error) {
             console.error('Error updating document:', error);
-            showMessage(`Error updating document: ${error.message}`, 'danger');
+            showMessage(`Error updating document: ${error.message}`, TOAST_TYPES.ERROR);
             throw error;
         }
     }
@@ -308,7 +365,7 @@ document.addEventListener("DOMContentLoaded", () => {
             window.location.href = "index.html";
         } catch (err) {
             console.error("Update failed:", err);
-            showMessage(`Error updating document: ${err.message}`, 'danger');
+            showMessage(`Error updating document: ${err.message}`, TOAST_TYPES.ERROR);
         }
     });
 
