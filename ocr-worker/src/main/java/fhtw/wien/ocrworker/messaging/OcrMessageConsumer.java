@@ -79,7 +79,7 @@ public class OcrMessageConsumer {
     }
 
     //Converts DTO to JSON and sends to a topic exchange, any service subscribed to that routing key receives it
-    private void sendOcrCompletionMessage(OcrResultDto ocrResult) {
+    private void sendOcrCompletionMessage(OcrResultDto ocrResult) { //just publishes event, nothing sent to a queue
         try {
             rabbitTemplate.convertAndSend(
                     RabbitMQConfig.DOCUMENT_EXCHANGE,

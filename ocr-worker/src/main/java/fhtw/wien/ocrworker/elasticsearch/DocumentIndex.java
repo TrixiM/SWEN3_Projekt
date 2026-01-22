@@ -9,7 +9,7 @@ import java.util.UUID;
 import java.util.Objects;
 
 
-@Document(indexName = "documents")
+@Document(indexName = "documents") //maps to Index class from backend
 public class DocumentIndex {
     
     @Id
@@ -63,7 +63,7 @@ public class DocumentIndex {
         this.processedAt = processedAt;
         this.indexedAt = Instant.now();
     }
-    
+    //converts the OCR result into an Elasticsearch document.
     public static DocumentIndex from(OcrResultDto ocrResult) {
         Objects.requireNonNull(ocrResult, "ocrResult");
         return new DocumentIndex(

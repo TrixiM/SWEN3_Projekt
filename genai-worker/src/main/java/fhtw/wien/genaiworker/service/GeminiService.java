@@ -57,11 +57,11 @@ public class GeminiService {
             throw new GenAIException("Gemini API key or URL is not configured");
         }
 
-        String processedText = truncateText(text, MAX_INPUT_LENGTH);
-        Map<String, Object> requestBody = buildRequestBody(String.format(SUMMARY_PROMPT_TEMPLATE, processedText));
+        String processedText = truncateText(text, MAX_INPUT_LENGTH); //cutting by OCR extractedText up to 50000 char at "." or new line
+        Map<String, Object> requestBody = buildRequestBody(String.format(SUMMARY_PROMPT_TEMPLATE, processedText)); //build prompt
 
         try {
-            GeminiResponse response = restClient.post()
+            GeminiResponse response = restClient.post() //Build api request and send
                     .uri("/v1beta/models/{model}:generateContent?key={key}",
                             config.getModel(),
                             config.getApi().getKey()
@@ -85,8 +85,8 @@ public class GeminiService {
         }
     }
 
-    @SuppressWarnings("unused")
-    public String generateSummaryFallback(String text, Throwable t) {
+    @SuppressWarnings("unused") //might look unused by ide but is used by circuitbreaker as fallback
+    public String generateSummaryFallback(String text, Throwable t) { //used when circut opens or third attempt of call fails
         log.warn("Gemini fallback triggered", t);
         return "Summary temporarily unavailable.";
     }

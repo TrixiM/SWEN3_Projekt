@@ -1,10 +1,14 @@
 <accessStatistics>
     <document>
-        <documentId>f24aaa10-ec3c-4433-b323-924cc52ce487</documentId>
-        <accessCount>12</accessCount>
-    </document>
-    <document>
         <documentId>357a8d1f-fe6a-43c3-9e27-c4af69c60cdd</documentId>
         <accessCount>3</accessCount>
+    </document>
+    <document>
+        <documentId>0ba9ef1e-416b-4c7d-918c-4319afa9a7fc</documentId>
+        <accessCount>9</accessCount>
+    </document>
+    <document>
+        <documentId>4830a5c3-946a-43d2-9ae9-6fbc57859ee0</documentId>
+        <accessCount>9</accessCount>
     </document>
 </accessStatistics>

@@ -24,7 +24,7 @@ public class SummarizationService {
 
         long startTime = System.currentTimeMillis();
 
-        Optional<String> validationError = validateOcrResult(ocrMessage);
+        Optional<String> validationError = validateOcrResult(ocrMessage); //Validate OCR Input
         if (validationError.isPresent()) {
             log.warn("⚠️ Validation failed: {}", validationError.get());
             return SummaryResultMessage.failure(
@@ -34,7 +34,7 @@ public class SummarizationService {
                     System.currentTimeMillis() - startTime
             );
         }
-        if(!ocrMessage.minimumTotalCharactersForSummary()){
+        if(!ocrMessage.minimumTotalCharactersForSummary()){ //if text shorter than 50 chars summary generation is skipped
             return SummaryResultMessage.success(
                     ocrMessage.documentId(),
                     ocrMessage.documentTitle(),

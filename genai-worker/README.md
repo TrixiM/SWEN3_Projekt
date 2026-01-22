@@ -125,7 +125,27 @@ GenAI Worker → RabbitMQ (summary.result message)
      ↓
 Backend receives and saves summary
 ```
-
+## Detailed Messaging Flow
+        ┌────────────┐
+        │ OCR Worker │
+        └─────┬──────┘
+              │
+    ocr.completed event
+              │
+    document.exchange
+              │
+    (binding exists)
+              │
+    ocr.completed.queue
+              │
+        ┌─────▼──────┐
+        │ GenAI      │
+        │ Worker     │
+        └─────┬──────┘
+              │
+    summary.result event
+              │
+    document.exchange
 ## Features
 
 ### 1. **Smart Text Processing**

@@ -36,7 +36,7 @@ public class DocumentSearchController {
         
         log.info("📥 Search request received for query: '{}'", q);
         
-        if (!isValidQuery(q)) {
+        if (!isValidQuery(q)) { //check if null or empty
             return ResponseEntity.badRequest().build();
         }
         
@@ -51,7 +51,7 @@ public class DocumentSearchController {
         }
     }
 
-    @GetMapping("/search/fuzzy")
+    @GetMapping("/search/fuzzy") //not used
     @Operation(summary = "Fuzzy search documents",
                description = "Fuzzy search documents in both title and content fields. Handles typos and misspellings. "
                            + "Fuzziness values: 0 (exact), 1 (1 char difference), 2 (2 chars), AUTO (recommended)")

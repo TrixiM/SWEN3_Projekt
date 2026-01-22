@@ -5,7 +5,7 @@ import org.springframework.context.annotation.Configuration;
 
 
 @Configuration
-@ConfigurationProperties(prefix = "gemini")
+@ConfigurationProperties(prefix = "gemini") //reads values under prefix from application.properties
 public class GenAIConfig {
     
     private Api api = new Api();

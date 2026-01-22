@@ -55,17 +55,17 @@ public class DocumentSearchService {
         try {
 
             Query searchQuery;
-            if (looksLikeFilename(queryString)) {
+            if (looksLikeFilename(queryString)) { //if search term contains file extensions then search for exact match in title.keyword
                 searchQuery = MultiMatchQuery.of(t -> t.fields("title.keyword").query(queryString).fuzziness("AUTO"))._toQuery();
             }else {
                 searchQuery = MultiMatchQuery.of(q -> q
                         .query(queryString)
                         .fields("title^2", "summary")      // boost title higher
                         .type(TextQueryType.BestFields)
-                        .operator(Operator.And)             // or And for stricter matches
-                        .fuzziness("AUTO")                 // AUTO applies fuzziness depending on term length
-                        .maxExpansions(50)                 // limit performance impact
-                        .minimumShouldMatch("70%")         // avoid overly broad matches
+                        .operator(Operator.And)             //  And for stricter matches, must contain both tokens
+                        .fuzziness("AUTO")                 // AUTO applies fuzziness/type distance depending on word length
+                        .maxExpansions(50)                 // limit performance impact, how many type variations elasticsearch tries
+                        .minimumShouldMatch("70%")         // avoid overly broad matches, how many terms must match
                 )._toQuery();
 
             }

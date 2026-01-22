@@ -28,7 +28,7 @@ public class MinIOStorageService {
     private final String bucketName;
     
     public MinIOStorageService(
-            @Value("${minio.endpoint:http://minio:9000}") String endpoint,
+            @Value("${minio.endpoint:http://minio:9000}") String endpoint, //docker compose env var
             @Value("${minio.access-key:minioadmin}") String accessKey,
             @Value("${minio.secret-key:minioadmin}") String secretKey,
             @Value("${minio.bucket-name:documents}") String bucketName) {
@@ -101,7 +101,7 @@ public class MinIOStorageService {
                     .object(objectKey)
                     .build();
             
-            return minioClient.getObject(getObjectArgs);
+            return minioClient.getObject(getObjectArgs); //returns inputstream
             
         } catch (MinioException | IOException | InvalidKeyException | NoSuchAlgorithmException e) {
             log.error("Failed to download document from MinIO: objectKey={}", objectKey, e);
@@ -116,7 +116,7 @@ public class MinIOStorageService {
         try (InputStream inputStream = downloadDocumentStream(objectKey)) {
             byte[] data = IOUtils.toByteArray(inputStream);
             log.debug("Downloaded to byte[]: key={}, size={} bytes", objectKey, data.length);
-            return data;
+            return data; //returns as byte array
         } catch (IOException e) {
             log.error("Failed to read document stream: objectKey={}", objectKey, e);
             throw new RuntimeException("Failed to read document from storage", e);

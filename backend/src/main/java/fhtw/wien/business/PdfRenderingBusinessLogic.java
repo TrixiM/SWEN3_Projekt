@@ -41,7 +41,7 @@ public class PdfRenderingBusinessLogic {
             // Get PDF content from MinIO
             byte[] pdfData = documentBusinessLogic.getDocumentContent(document);
             
-            try (PDDocument pdfDocument = Loader.loadPDF(pdfData)) {
+            try (PDDocument pdfDocument = Loader.loadPDF(pdfData)) { //Load PDF based on byte array from MinIO
                 int totalPages = pdfDocument.getNumberOfPages();
                 log.debug("PDF loaded successfully. Total pages: {}", totalPages);
                 
@@ -86,10 +86,10 @@ public class PdfRenderingBusinessLogic {
 
     private byte[] renderPageToImage(PDDocument pdfDocument, int pageNumber, float scale, Object documentId) throws IOException {
         PDFRenderer renderer = new PDFRenderer(pdfDocument);
-        BufferedImage image = renderer.renderImageWithDPI(pageNumber - 1, DEFAULT_DPI * scale);
+        BufferedImage image = renderer.renderImageWithDPI(pageNumber - 1, DEFAULT_DPI * scale); //converts a PDF page into BufferedImage using calculated resolution
 
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-            ImageIO.write(image, IMAGE_FORMAT, baos);
+            ImageIO.write(image, IMAGE_FORMAT, baos); //image is written as png to stream
             byte[] imageBytes = baos.toByteArray();
             
             log.debug("Successfully rendered page {} for document {}, image size: {} bytes", 

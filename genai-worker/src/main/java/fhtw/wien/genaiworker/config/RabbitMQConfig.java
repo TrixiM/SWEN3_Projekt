@@ -39,6 +39,7 @@ public class RabbitMQConfig {
         return new Queue(SUMMARY_RESULT_QUEUE, true);
     }
 
+    //if message arrives at exchange with defined routing key, then route to queue
     @Bean
     public Binding ocrCompletedBinding(Queue ocrCompletedQueue, DirectExchange documentExchange) {
         return BindingBuilder.bind(ocrCompletedQueue)

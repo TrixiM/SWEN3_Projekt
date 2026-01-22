@@ -20,7 +20,7 @@ public class GeminiHealthIndicator implements HealthIndicator {
         try {
             boolean isConfigured = geminiService.isConfigured();
             
-            if (isConfigured) {
+            if (isConfigured) { //checks if Gemini API key and url exists
                 return Health.up()
                         .withDetail("status", "Configured")
                         .withDetail("api", "Gemini Pro")
