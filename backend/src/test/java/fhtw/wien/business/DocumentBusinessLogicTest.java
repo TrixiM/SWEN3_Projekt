@@ -5,6 +5,7 @@ import fhtw.wien.domain.DocumentStatus;
 import fhtw.wien.exception.DataAccessException;
 import fhtw.wien.exception.InvalidRequestException;
 import fhtw.wien.exception.NotFoundException;
+import fhtw.wien.repo.DocumentAccessStatRepo;
 import fhtw.wien.repo.DocumentRepo;
 import fhtw.wien.service.MinIOStorageService;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,6 +30,9 @@ class DocumentBusinessLogicTest {
 
     @Mock
     private DocumentRepo repository;
+
+    @Mock
+    private DocumentAccessStatRepo documentAccessStatRepo;
 
     @Mock
     private MinIOStorageService minioStorageService;
@@ -238,6 +242,7 @@ class DocumentBusinessLogicTest {
 
         businessLogic.deleteDocument(testId);
 
+        verify(documentAccessStatRepo).findByDocumentId(testId);
         verify(repository).findById(testId);
         verify(minioStorageService).deleteDocument("test-object-key");
         verify(repository).deleteById(testId);

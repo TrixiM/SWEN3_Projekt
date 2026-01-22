@@ -133,9 +133,15 @@ public class DocumentBusinessLogic {
                             document.getObjectKey(), minioException);
                 }
             }
-            accessStatRepo.deleteByDocumentId(id);
+            List<DocumentAccessStat> stats = accessStatRepo.findByDocumentId(id);
+
+            if (!stats.isEmpty()) {
+                accessStatRepo.deleteByDocumentId(id);
+                log.info("Deleted {} access stats for document {}", stats.size(), id);
+            }
             // Delete from database
             repository.deleteById(id);
+            log.info("Document deleted: id={}", id);
             
         } catch (NotFoundException e) {
             throw e; // Re-throw NotFoundException as-is
