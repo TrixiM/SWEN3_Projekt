@@ -23,31 +23,33 @@ public class TesseractOcrService {
     private final OcrConfig ocrConfig;
     private final ITesseract tesseract;
 
-    public TesseractOcrService(OcrConfig ocrConfig) {
+    public TesseractOcrService(OcrConfig ocrConfig) { //creates configured Tesseract during startup
         this.ocrConfig = ocrConfig;
         this.tesseract = createTesseract();
     }
 
+    //Converts bytes to an image, runs tessareact ocr, calculates confidence and returns OcrResult
     public OcrResult extractText(byte[] imageData, String language) throws TesseractException, IOException {
         if (imageData == null || imageData.length == 0) {
             throw new IllegalArgumentException("Image data cannot be null or empty");
         }
-
+        //useless since ocrConfig.getDefaultLanguage() is passed
         String resolvedLanguage = (language == null || language.isBlank())
                 ? ocrConfig.getDefaultLanguage()
                 : language.trim();
 
         try (ByteArrayInputStream inputStream = new ByteArrayInputStream(imageData)) {
-            BufferedImage image = ImageIO.read(inputStream);
+            BufferedImage image = ImageIO.read(inputStream); //Converts bytes to image
             if (image == null) {
                 throw new IOException("Failed to read image data");
             }
 
+            //OCR and confidence calc
             String extractedText;
             long processingTime;
             int confidence;
 
-            synchronized (tesseract) {
+            synchronized (tesseract) { //only one thread/image should use tesseract at the same time
                 tesseract.setLanguage(resolvedLanguage);
                 long startTime = System.currentTimeMillis();
                 extractedText = tesseract.doOCR(image);
@@ -55,6 +57,7 @@ public class TesseractOcrService {
                 confidence = calculateConfidence(image);
             }
 
+            //If extractedText is null, set confidence to 0
             String cleanedText = extractedText == null ? "" : extractedText.trim();
             if (cleanedText.isEmpty()) {
                 confidence = 0;
@@ -67,7 +70,7 @@ public class TesseractOcrService {
             throw e;
         }
     }
-
+    //calculates average word confidence
     private int calculateConfidence(BufferedImage image) throws TesseractException {
         var words = tesseract.getWords(image, TessPageIteratorLevel.RIL_WORD);
         if (words == null || words.isEmpty()) {
@@ -92,7 +95,7 @@ public class TesseractOcrService {
 
         instance.setLanguage(ocrConfig.getDefaultLanguage());
         instance.setOcrEngineMode(ocrConfig.getOcrEngineMode());
-        instance.setPageSegMode(ocrConfig.getPageSegMode());
+        instance.setPageSegMode(ocrConfig.getPageSegMode()); //Page Segmentation Mode: how Tesseract splits text blocks
         return instance;
     }
 

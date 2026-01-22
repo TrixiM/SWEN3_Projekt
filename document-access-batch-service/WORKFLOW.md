@@ -1,4 +1,4 @@
-Scheduler / REST 
+Scheduler / REST
 ↓
 JobLauncher
 ↓
@@ -8,7 +8,7 @@ Step: documentAccessStep
 ↓
 CHUNK LOOP
 ┌──────────────────────────────────────────┐
-│ 1. reader.read()                          │
+│ 1. reader.read()                         │
 │ 2. processor.process(item)               │
 │ 3. writer.write(chunk)                   │
 │    → producer.send(dto)                  │
@@ -16,6 +16,8 @@ CHUNK LOOP
 ↓
 Repeat until reader returns null
 ↓
-Step completes
+documentAccessStep completes
+↓
+Step: archiveStep runs (Tasklet)
 ↓
 Job completes

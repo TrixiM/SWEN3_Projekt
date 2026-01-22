@@ -14,28 +14,29 @@ import java.nio.file.StandardCopyOption;
 @Component
 public class ArchiveTasklet implements Tasklet {
 
-    @Value("${app.accesslog.dir}")
+    @Value("${app.accesslog.dir}") //where xml files are read from
     private String accessLogDir;
 
-    @Value("${app.accesslog.archive.dir}")
+    @Value("${app.accesslog.archive.dir}")//where processed files are archived
     private String archiveDir;
 
     @Override
     public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
 
-        File sourceDir = new File(accessLogDir);
-        File archive = new File(archiveDir);
+        File sourceDir = new File(accessLogDir); //source dir
+        File archive = new File(archiveDir); //target/archive dir
 
         if (!archive.exists()) {
             archive.mkdirs();
         }
 
-        File[] xmlFiles = sourceDir.listFiles((dir, name) -> name.endsWith(".xml"));
+        File[] xmlFiles = sourceDir.listFiles((dir, name) -> name.endsWith(".xml"));//filters for files ending w .xml
 
+        //move .xml files to archive
         if (xmlFiles != null) {
             for (File file : xmlFiles) {
-                File dest = new File(archive, file.getName());
-                Files.move(file.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                File dest = new File(archive, file.getName()); //constructs destination
+                Files.move(file.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING); //move from source to archive, overwrite existing file if present
             }
         }
 

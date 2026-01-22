@@ -17,6 +17,7 @@ import org.springframework.core.io.FileSystemResource;
 public class DocumentAccessItemReader  {
     private static final Logger log = LoggerFactory.getLogger(DocumentAccessItemReader.class);
 
+    //MultiResourceItemReader allows reading of multiple files, manages resource iteration
     @Bean
     public MultiResourceItemReader<DocumentAccessXml> multiResourceItemReader(
             StaxEventItemReader<DocumentAccessXml> documentXmlReader) throws Exception {
@@ -31,7 +32,7 @@ public class DocumentAccessItemReader  {
                         .getResources("file:/app/accessLog/*.xml")
         );
 
-        reader.setDelegate(documentXmlReader);
+        reader.setDelegate(documentXmlReader); //sets reader for each file
 
         return reader;
     }
@@ -54,16 +55,17 @@ public class DocumentAccessItemReader  {
         log.info("Creating XML item reader for access log");
         return new StaxEventItemReaderBuilder<DocumentAccessXml>()
                 .name("documentItemReader")
-                .addFragmentRootElements("document")
-                .unmarshaller(documentUnmarshaller)
-                .strict(false)
+                .addFragmentRootElements("document") //sets each <document> in xml as one item to become a DocumentAccessXML object
+                .unmarshaller(documentUnmarshaller) //to unmarshall: convert xml -> java
+                .strict(false) //not failing if resource not available or found
                 .build();
     }
 
+    //converts xml fragments into java objects
     @Bean
     public Jaxb2Marshaller documentUnmarshaller() {
         Jaxb2Marshaller marshaller = new Jaxb2Marshaller();
-        marshaller.setClassesToBeBound(DocumentAccessXml.class);
+        marshaller.setClassesToBeBound(DocumentAccessXml.class); //only unmarshalling into DocumentAccessXml
         return marshaller;
     }
 

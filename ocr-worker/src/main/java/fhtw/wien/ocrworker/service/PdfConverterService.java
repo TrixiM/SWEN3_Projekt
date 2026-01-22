@@ -34,8 +34,8 @@ public class PdfConverterService {
         
         List<byte[]> images = new ArrayList<>();
         
-        try (PDDocument document = Loader.loadPDF(pdfData)) {
-            int pageCount = document.getNumberOfPages();
+        try (PDDocument document = Loader.loadPDF(pdfData)) { //loads PDF from byte array
+            int pageCount = document.getNumberOfPages(); //count of pages
             log.debug("PDF has {} pages", pageCount);
             
             if (pageCount == 0) {
@@ -44,7 +44,8 @@ public class PdfConverterService {
             }
             
             PDFRenderer renderer = new PDFRenderer(document);
-            
+
+            //Render each page into an image
             for (int pageIndex = 0; pageIndex < pageCount; pageIndex++) {
                 try {
                     BufferedImage bufferedImage = renderer.renderImageWithDPI(
@@ -53,7 +54,7 @@ public class PdfConverterService {
                             ImageType.RGB
                     );
                     
-                    byte[] imageData = convertImageToBytes(bufferedImage, ocrConfig.getImageFormat());
+                    byte[] imageData = convertImageToBytes(bufferedImage, ocrConfig.getImageFormat()); //converts into bytes in PNG format
                     images.add(imageData);
                     
                 } catch (IOException e) {
@@ -62,7 +63,7 @@ public class PdfConverterService {
                 }
             }
             
-            return images;
+            return images; //all pages of a PDF in bytes in png format
             
         } catch (IOException e) {
             log.error("Failed to load PDF document", e);
@@ -72,7 +73,7 @@ public class PdfConverterService {
     
 
     
-
+    //buffered image into bytes
     private byte[] convertImageToBytes(BufferedImage image, String format) throws IOException {
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             if (!ImageIO.write(image, format, outputStream)) {

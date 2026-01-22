@@ -16,19 +16,19 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 
 @Component
-public class DocumentAccessItemProcessor
+public class DocumentAccessItemProcessor //ItemProcessor<InputFormat, OutputFormat>
         implements ItemProcessor<DocumentAccessXml, DocumentAccessStatDto>, StepExecutionListener {
 
     private static final Logger log =
             LoggerFactory.getLogger(DocumentAccessItemProcessor.class);
 
-    //private LocalDate date = LocalDate.of(2026,1,29);
+    //private LocalDate date = LocalDate.of(2026,1,29); //for testing purposes
 
     public DocumentAccessItemProcessor() {
     }
 
     @Override
-    public DocumentAccessStatDto process(DocumentAccessXml item) {
+    public DocumentAccessStatDto process(DocumentAccessXml item) { //for every item <document> in chunk
         log.debug("Processing document {} with accessCount {} from {}",
                 item.getDocumentId(), item.getAccessCount(), LocalDate.now());
         return new DocumentAccessStatDto(
@@ -38,7 +38,7 @@ public class DocumentAccessItemProcessor
         );
     }
 
-    @AfterStep
+    @AfterStep //run once all chunks have been read, processed and written
     public ExitStatus afterStep(StepExecution stepExecution) {
         log.info("Step {} completed: read={}, written={}, skipped={}",
                 stepExecution.getStepName(),

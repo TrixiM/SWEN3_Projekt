@@ -55,7 +55,7 @@ public class RabbitMQConfig {
     public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
         RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
         rabbitTemplate.setMessageConverter(jsonMessageConverter());
-        rabbitTemplate.setMandatory(true);
+        rabbitTemplate.setMandatory(true); //message must be routed to a queue, otherwise return to producer
         return rabbitTemplate;
     }
     

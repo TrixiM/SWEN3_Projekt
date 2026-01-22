@@ -31,7 +31,7 @@ public class FileTypeDetector {
             "application/pdf"
     );
     
-    // Magic numbers for file type detection
+    // Magic numbers for file type detection (to check first bytes of file)
     private static final byte[] PDF_SIGNATURE = "%PDF".getBytes();
     private static final byte[] PNG_SIGNATURE = {(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
     private static final byte[] JPEG_SIGNATURE = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF};

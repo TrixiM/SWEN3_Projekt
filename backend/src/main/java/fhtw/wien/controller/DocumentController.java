@@ -22,8 +22,8 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/v1/documents")
-@CrossOrigin(origins = "*")
+@RequestMapping("/v1/documents") //Base path for all endpoints
+@CrossOrigin(origins = "*") //CORS enabled for browser to provide response to frontend
 public class DocumentController {
 
     private static final Logger log = LoggerFactory.getLogger(DocumentController.class);
@@ -36,7 +36,7 @@ public class DocumentController {
         this.minioStorageService = minioStorageService;
     }
 
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE) //Create Document
     public ResponseEntity<Document> create(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "title", required = false) String title,
@@ -45,7 +45,7 @@ public class DocumentController {
         // Note: Using InputStream instead of file.getBytes() to avoid loading entire PDF into memory
         final String originalFilename = StringUtils.cleanPath(file.getOriginalFilename() == null ? "" : file.getOriginalFilename());
         
-        // Default title to filename if not provided
+        // Default title to filename
         final String documentTitle = StringUtils.hasText(title) ? title : originalFilename;
         
         log.info("POST /v1/documents - title: '{}', filename: '{}', size: {} bytes", 
@@ -64,12 +64,12 @@ public class DocumentController {
                 file.getContentType(),
                 file.getSize()
         );
-        if (tags != null && !tags.isEmpty()) {
+        if (tags != null && !tags.isEmpty()) { //in case tags were added on dashboard
             doc.setTags(tags);
         }
 
-        var saved = service.create(doc, file.getInputStream());
-        return ResponseEntity.created(URI.create("/v1/documents/" + saved.getId())).body(saved);
+        var saved = service.create(doc, file.getInputStream()); //.getInputStream() instead of getBytes() to prevent potential memory issues w large docs
+        return ResponseEntity.created(URI.create("/v1/documents/" + saved.getId())).body(saved); //location header points to new resource, body of response contains new doc
     }
 
     @PutMapping("{id}")

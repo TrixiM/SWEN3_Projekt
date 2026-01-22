@@ -21,18 +21,20 @@ public class RabbitMQConfig {
         return new DirectExchange(DOCUMENT_EXCHANGE, true, false);
     }
 
+    //stores messages until consumed by backend
     @Bean
     public Queue documentAccessStatsQueue() {
         return new Queue(DOCUMENT_ACCESS_STATS_QUEUE, true);
     }
 
     @Bean
-    public Binding ocrCompletedBinding(Queue documentAccessStatsQueue, DirectExchange documentExchange) {
+    public Binding documentAccessStatsProcessedBinding(Queue documentAccessStatsQueue, DirectExchange documentExchange) {
         return BindingBuilder.bind(documentAccessStatsQueue)
                 .to(documentExchange)
-                .with(DOCUMENT_ACCESS_STATS_ROUTING_KEY);
+                .with(DOCUMENT_ACCESS_STATS_ROUTING_KEY);    //only messages with that routing key will reach the queue
     }
 
+    //converts java into json
     @Bean
     public MessageConverter jsonMessageConverter() {
         return new Jackson2JsonMessageConverter();
@@ -41,8 +43,8 @@ public class RabbitMQConfig {
     @Bean
     public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
         RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
-        rabbitTemplate.setMessageConverter(jsonMessageConverter());
-        rabbitTemplate.setMandatory(true);
+        rabbitTemplate.setMessageConverter(jsonMessageConverter()); //DTOs into JSON
+        rabbitTemplate.setMandatory(true); //message must be routed to a queue, otherwise return to producer
         return rabbitTemplate;
     }
 }

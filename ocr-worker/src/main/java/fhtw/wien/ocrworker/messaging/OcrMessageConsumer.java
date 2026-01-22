@@ -34,19 +34,21 @@ public class OcrMessageConsumer {
         this.elasticsearchService = elasticsearchService;
     }
 
-    @RabbitListener(queues = RabbitMQConfig.DOCUMENT_CREATED_QUEUE)
+    @RabbitListener(queues = RabbitMQConfig.DOCUMENT_CREATED_QUEUE) //listens to queue
     public void handleDocumentCreated(Document document) {
         log.info("OCR started: id={}, file='{}'", document.id(), document.originalFilename());
 
         String messageId = "ocr-doc-" + document.id();
+        //idempotency processing
         if (!idempotencyService.tryMarkAsProcessed(messageId)) {
             log.info("Skipping duplicate message for {}", document.id());
             return;
         }
-
+        //ocr processing
         OcrResultDto ocrResult = ocrProcessingService.processDocument(document);
         log.info("OCR done: id={}, chars={}, status={}", document.id(), ocrResult.totalCharacters(), ocrResult.status());
 
+        //elasticsearch indexing
         if (ocrResult.isSuccess() && ocrResult.extractedText() != null && !ocrResult.extractedText().isEmpty()) {
             try {
                 elasticsearchService.indexDocument(ocrResult);
@@ -76,7 +78,7 @@ public class OcrMessageConsumer {
         }
     }
 
-
+    //Converts DTO to JSON and sends to a topic exchange, any service subscribed to that routing key receives it
     private void sendOcrCompletionMessage(OcrResultDto ocrResult) {
         try {
             rabbitTemplate.convertAndSend(

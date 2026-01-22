@@ -22,10 +22,10 @@ public class DocumentAccessItemWriter implements ItemWriter<DocumentAccessStatDt
     }
 
     @Override
-    public void write(Chunk<? extends DocumentAccessStatDto> chunk) {
+    public void write(Chunk<? extends DocumentAccessStatDto> chunk) { //called once per chunk
         log.info("Writing chunk of {} document access records", chunk.size());
         for (DocumentAccessStatDto dto : chunk) {
-            producer.send(dto);
+            producer.send(dto); //one message for each item
         }
     }
 }

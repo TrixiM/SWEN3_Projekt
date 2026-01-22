@@ -12,7 +12,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "document_access_stats",
-        uniqueConstraints = {@UniqueConstraint(columnNames = {"document_id", "access_date"})})
+        uniqueConstraints = {@UniqueConstraint(columnNames = {"document_id", "access_date"})}) //constraint to prevent duplicate stats for the same day.
 @Getter
 @Setter
 @NoArgsConstructor
@@ -22,7 +22,7 @@ public class DocumentAccessStat {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false) //Many access stats → one document, one access stat must belong to a document
     @JoinColumn(name = "document_id", nullable = false)
     private Document document;
 

@@ -19,14 +19,15 @@ import org.springframework.transaction.PlatformTransactionManager;
 @Configuration
 public class ChunksConfig {
 
+    //defines batch process
     @Bean
-    public Job documentAccessJob(JobRepository jobRepository,
+    public Job documentAccessJob(JobRepository jobRepository, //to store job metadata (status, executions,..)
                                  Step documentAccessStep,
                                  Step archiveStep) {
-        return new JobBuilder("documentAccessJob", jobRepository)
-                .incrementer(new RunIdIncrementer())
-                .start(documentAccessStep)
-                .next(archiveStep)
+        return new JobBuilder("documentAccessJob", jobRepository) //creates a job with name
+                .incrementer(new RunIdIncrementer()) //allows jobs to run w unique IDs
+                .start(documentAccessStep) //main processing step
+                .next(archiveStep) //additional step to archive (only if main step is successful), runs once per job
                 .build();
     }
 
@@ -39,7 +40,7 @@ public class ChunksConfig {
                                    DocumentAccessItemWriter writer) throws JAXBException {
 
         return new StepBuilder("documentAccessStep", jobRepository)
-                .<DocumentAccessXml, DocumentAccessStatDto>chunk(10, txManager)
+                .<DocumentAccessXml, DocumentAccessStatDto>chunk(10, txManager) //Input: DocumentAccessXml, Output: DocumentAccessDto, reads 10 inputs in one go
                 .reader(multiResourceItemReader)
                 .processor(processor)
                 .writer(writer)

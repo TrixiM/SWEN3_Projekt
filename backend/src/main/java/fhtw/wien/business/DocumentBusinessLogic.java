@@ -42,7 +42,7 @@ public class DocumentBusinessLogic {
      * @param pdfStream the PDF content as InputStream (null for updates without file changes)
      * @return the saved document with storage metadata
      */
-    @Transactional
+    @Transactional //to run inside a db transaction (commit if function runs successfully, rollback if exception is thrown)
     public Document createOrUpdateDocument(Document doc, InputStream pdfStream) {
         validateDocument(doc);
 
@@ -133,7 +133,7 @@ public class DocumentBusinessLogic {
                             document.getObjectKey(), minioException);
                 }
             }
-            
+            accessStatRepo.deleteByDocumentId(id);
             // Delete from database
             repository.deleteById(id);
             
@@ -166,9 +166,7 @@ public class DocumentBusinessLogic {
         }
     }
     
-    /**
-     * Validates document input.
-     */
+    //Validates document input.
     private void validateDocument(Document doc) {
         if (doc == null) {
             throw new InvalidRequestException("Document cannot be null");

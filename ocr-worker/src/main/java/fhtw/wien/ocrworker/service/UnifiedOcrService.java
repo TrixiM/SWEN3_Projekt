@@ -45,8 +45,8 @@ public class UnifiedOcrService {
         long startTime = System.currentTimeMillis();
 
         try {
-            byte[] documentData = minioClientService.downloadDocument(document.objectKey());
-            FileTypeDetector.FileType fileType = detectFileType(document, documentData);
+            byte[] documentData = minioClientService.downloadDocument(document.objectKey()); //download document from MinIO
+            FileTypeDetector.FileType fileType = detectFileType(document, documentData); //detects file type
 
             return switch (fileType) {
                 case PDF -> processPdfDocument(document, documentData, startTime);
@@ -95,7 +95,7 @@ public class UnifiedOcrService {
 
     private OcrResultDto processPdfDocument(Document document, byte[] pdfData, long startTime)
             throws IOException, TesseractException {
-
+        //Convert PDF to image
         List<byte[]> pageImages = pdfConverterService.convertPdfToImages(pdfData);
         if (pageImages.isEmpty()) {
             throw new IOException("PDF contains no processable pages");
@@ -105,6 +105,7 @@ public class UnifiedOcrService {
         StringBuilder fullText = new StringBuilder();
         int totalConfidence = 0;
 
+        //Loop through pages
         for (int i = 0; i < pageImages.size(); i++) {
             int pageNumber = i + 1;
             long pageStartTime = System.currentTimeMillis();
@@ -136,7 +137,7 @@ public class UnifiedOcrService {
                         System.currentTimeMillis() - pageStartTime));
             }
         }
-
+        //Calc overall confidence and processing time
         int overallConfidence = pageResults.isEmpty() ? 0 : totalConfidence / pageResults.size();
         long totalProcessingTime = System.currentTimeMillis() - startTime;
 

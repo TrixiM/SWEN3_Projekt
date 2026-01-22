@@ -17,7 +17,7 @@ public class DocumentAccessStatProducer {
     }
 
     public void send(DocumentAccessStatDto message) {
-        rabbitTemplate.convertAndSend(
+        rabbitTemplate.convertAndSend( //converts DTO into JSON and publishes to set exchange and routing key
                 DOCUMENT_EXCHANGE,
                 DOCUMENT_ACCESS_STATS_ROUTING_KEY,
                 message

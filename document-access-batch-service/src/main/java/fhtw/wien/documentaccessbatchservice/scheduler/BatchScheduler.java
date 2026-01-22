@@ -17,7 +17,7 @@ public class BatchScheduler {
         this.documentAccessJob = documentAccessJob;
     }
 
-    @Scheduled(cron = "0 0 1 * * *")
+    @Scheduled(cron = "0 0 1 * * *") //runs every day at 1 AM
     public void runJob() throws Exception {
         jobLauncher.run(
                 documentAccessJob,

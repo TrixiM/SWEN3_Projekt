@@ -30,27 +30,27 @@ public class DocumentAccessStatsMessageConsumer {
     }
 
     @RabbitListener (queues=DOCUMENT_ACCESS_STATS_QUEUE)
-    @Transactional
+    @Transactional //runs in a transaction, database operations are committed or rolled back
     public void handleAccessStats(DocumentAccessStatDto dto){
         log.info("Access stats received for document {}", dto.documentId());
 
-        if (!idempotencyService.tryMarkAsProcessed(dto.messageId())) {
+        if (!idempotencyService.tryMarkAsProcessed(dto.messageId())) { //duplicate messages are ignored
             log.info("Skipping duplicate access stat message {}", dto.messageId());
             return;
         }
 
-        Document document = documentRepo.findById(dto.documentId()).orElseThrow(() -> {
+        Document document = documentRepo.findById(dto.documentId()).orElseThrow(() -> { //doc existence check
             log.warn("Document not found for document access stats import: {}", dto.documentId());
             return new MessagingException("Document not found: " + dto.documentId());
         });
 
-        DocumentAccessStat stat = documentAccessStatRepo
+        DocumentAccessStat stat = documentAccessStatRepo //check if doc with date already exists in db, if true update access count
                 .findByDocumentAndDate(dto.documentId(), dto.date())
                 .map(existing -> {
                     existing.setAccessCount(dto.accessCount());
                     return existing;
                 })
-                .orElseGet(() -> new DocumentAccessStat(document, dto.accessCount(), dto.date()));
+                .orElseGet(() -> new DocumentAccessStat(document, dto.accessCount(), dto.date())); //create new object if not found
 
         documentAccessStatRepo.save(stat);
 
